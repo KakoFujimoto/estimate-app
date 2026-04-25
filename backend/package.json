@@ -1,0 +1,22 @@
+{
+  "name": "estimate-app-backend",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "node dist/main.js",
+    "start:dev": "nest start --watch",
+    "build": "nest build"
+  },
+  "dependencies": {
+    "@nestjs/common": "^10.4.5",
+    "@nestjs/core": "^10.4.5",
+    "@nestjs/platform-express": "^10.4.5",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^10.4.5",
+    "@types/node": "^22.7.4",
+    "typescript": "^5.6.2"
+  }
+}
