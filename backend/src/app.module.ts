@@ -1,10 +1,12 @@
+// file: backend/src/app.module.ts
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { EstimateModule } from './estimate/estimate.module';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, EstimateModule],
   controllers: [AppController],
   providers: [AppService],
 })
