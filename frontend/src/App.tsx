@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { createEstimate, fetchEstimates } from './api/estimateApi';
 import type { Estimate, EstimateItem } from './types/estimate';
 
@@ -90,7 +91,7 @@ export default function App() {
         if (key === 'quantity')
         {
           return { ...item, quantity: 0 };
-        }
+      }
       }
 
       if (key === 'price') {
@@ -236,6 +237,7 @@ export default function App() {
                 <th>タイトル</th>
                 <th>明細数</th>
                 <th>合計金額</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -245,6 +247,9 @@ export default function App() {
                   <td>{estimate.title}</td>
                   <td>{estimate.items.length}</td>
                   <td>{formatCurrency(calculateTotal(estimate.items))}</td>
+                  <td>
+                    <Link to={`/estimates/${estimate.id}`}>詳細</Link>
+                  </td>
                 </tr>
               ))}
             </tbody>
