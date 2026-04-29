@@ -1,7 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { createEstimate, fetchEstimates } from './api/estimateApi';
-import type { Estimate } from './types/estimate';
-import { EstimateItem } from './types/estimate';
+import type { Estimate, EstimateItem } from './types/estimate';
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('ja-JP', {
@@ -11,33 +10,45 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
-function calculateTotal(estimate: Estimate): number {
-  return estimate.items.reduce((sum:number, item:EstimateItem) => sum + item.price * item.quantity, 0);
+function calculateTotal(items: EstimateItem[]): number {
+  return items.reduce((sum: number, item: EstimateItem) => sum + item.price * item.quantity, 0);
+}
+
+function createEmptyItem(): EstimateItem {
+  return {
+    id: crypto.randomUUID(),
+    name: '',
+    price: 0,
+    quantity: 1,
+  };
 }
 
 export default function App() {
   const [estimates, setEstimates] = useState<Estimate[]>([]);
   const [title, setTitle] = useState<string>('');
-  const [itemName, setItemName] = useState<string>('');
-  const [price, setPrice] = useState<string>('');
-  const [quantity, setQuantity] = useState<string>('1');
+  const [items, setItems] = useState<EstimateItem[]>([createEmptyItem()]);
   const [loading, setLoading] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
 
-  const canSubmit = useMemo(() => {
-    const parsedPrice = Number(price);
-    const parsedQuantity = Number(quantity);
+  const totalAmount = useMemo(() => calculateTotal(items), [items]);
 
-    return (
-      title.trim().length > 0 &&
-      itemName.trim().length > 0 &&
-      Number.isFinite(parsedPrice) &&
-      Number.isFinite(parsedQuantity) &&
-      parsedPrice >= 0 &&
-      parsedQuantity > 0
-    );
-  }, [title, itemName, price, quantity]);
+  const canSubmit = useMemo(() => {
+    if (title.trim().length === 0 || items.length === 0) {
+      return false;
+    }
+
+    return items.every((item) => {
+      const trimmedName = item.name.trim();
+      return (
+        trimmedName.length > 0
+        && Number.isFinite(item.price)
+        && Number.isFinite(item.quantity)
+        && item.price >= 0
+        && item.quantity > 0
+      );
+    });
+  }, [title, items]);
 
   const loadEstimates = async (): Promise<void> => {
     setLoading(true);
@@ -58,6 +69,56 @@ export default function App() {
     void loadEstimates();
   }, []);
 
+  const updateItem = (id:string, key: 'name' | 'price' | 'quantity', value: string): void => {
+    setItems((prevItems) =>
+      prevItems.map((item) => {
+      if (item.id !== id) {
+        return item;
+      }
+
+      if (key === 'name') {
+        return { ...item, name: value };
+      }
+
+      const parsedValue = Number(value);
+
+      if (!Number.isFinite(parsedValue)) {
+        if (key === 'price')
+        {
+          return { ...item, price: 0 };
+        }
+        if (key === 'quantity')
+        {
+          return { ...item, quantity: 0 };
+        }
+      }
+
+      if (key === 'price') {
+        return { ...item, price: parsedValue };
+      }
+
+      if (key === 'quantity') {
+        return { ...item, quantity: parsedValue };
+      }
+
+      return item;
+    }));
+  };
+
+  const handleAddItem = (): void => {
+    setItems((prevItems) => [...prevItems, createEmptyItem()]);
+  };
+
+  const handleRemoveItem = (id: string): void => {
+    setItems((prevItems) => {
+      if (prevItems.length <= 1) {
+        return prevItems;
+      }
+
+      return prevItems.filter((item) => item.id !== id);
+    });
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
 
@@ -71,19 +132,11 @@ export default function App() {
     try {
       await createEstimate({
         title: title.trim(),
-        items: [
-          {
-            name: itemName.trim(),
-            price: Number(price),
-            quantity: Number(quantity),
-          },
-        ],
+        items,
       });
 
       setTitle('');
-      setItemName('');
-      setPrice('');
-      setQuantity('1');
+      setItems([createEmptyItem()]);
       setErrorMessage('');
       await loadEstimates();
     } catch (error) {
@@ -106,36 +159,56 @@ export default function App() {
             <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="例: 4月Web制作" />
           </label>
 
-          <label>
-            明細名
-            <input
-              value={itemName}
-              onChange={(event) => setItemName(event.target.value)}
-              placeholder="例: デザイン費"
-            />
-          </label>
+          {items.map((item, index) => (
+            <div key={item.id}>
+              <h3>明細 {index + 1}</h3>
 
-          <label>
-            単価
-            <input
-              type="number"
-              min="0"
-              value={price}
-              onChange={(event) => setPrice(event.target.value)}
-              placeholder="10000"
-            />
-          </label>
+              <label>
+                明細名
+                <input
+                  value={item.name}
+                  onChange={(event) => updateItem(item.id!, 'name', event.target.value)}
+                  placeholder="例: デザイン費"
+                />
+              </label>
 
-          <label>
-            数量
-            <input
-              type="number"
-              min="1"
-              value={quantity}
-              onChange={(event) => setQuantity(event.target.value)}
-              placeholder="1"
-            />
-          </label>
+              <label>
+                単価
+                <input
+                  type="number"
+                  min="0"
+                  value={item.price}
+                  onChange={(event) => updateItem(item.id!, 'price', event.target.value)}
+                  placeholder="10000"
+                />
+              </label>
+
+              <label>
+                数量
+                <input
+                  type="number"
+                  min="1"
+                  value={item.quantity}
+                  onChange={(event) => updateItem(item.id!, 'quantity', event.target.value)}
+                  placeholder="1"
+                />
+              </label>
+
+              <button
+                type="button"
+                onClick={() => handleRemoveItem(item.id!)}
+                disabled={items.length <= 1 || submitting}
+              >
+                削除
+              </button>
+            </div>
+          ))}
+
+          <button type="button" onClick={handleAddItem} disabled={submitting}>
+            ＋明細追加
+          </button>
+
+          <p>合計金額: {formatCurrency(totalAmount)}</p>
 
           <button type="submit" disabled={!canSubmit || submitting}>
             {submitting ? '作成中...' : '見積を作成'}
@@ -171,7 +244,7 @@ export default function App() {
                   <td>{estimate.id}</td>
                   <td>{estimate.title}</td>
                   <td>{estimate.items.length}</td>
-                  <td>{formatCurrency(calculateTotal(estimate))}</td>
+                  <td>{formatCurrency(calculateTotal(estimate.items))}</td>
                 </tr>
               ))}
             </tbody>
