@@ -1,5 +1,5 @@
 export type EstimateItem = {
-  id?: string;
+  id: string;
   name: string;
   price: number;
   quantity: number;

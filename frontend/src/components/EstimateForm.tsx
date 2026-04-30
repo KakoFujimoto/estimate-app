@@ -6,6 +6,17 @@ type EstimateFormProps = {
   onCreated: () => Promise<void>;
 };
 
+type ItemError = {
+  name?: string;
+  price?: string;
+  quantity?: string;
+};
+
+type FormErrors = {
+  title?: string;
+  items: Record<string, ItemError>;
+};
+
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('ja-JP', {
     style: 'currency',
@@ -20,10 +31,49 @@ function calculateTotal(items: EstimateItem[]): number {
 
 function createEmptyItem(): EstimateItem {
   return {
+    id: crypto.randomUUID(),
     name: '',
     price: 0,
     quantity: 1,
   };
+}
+
+function getItemErrorKey(item: EstimateItem, index: number): string {
+  return item.id;
+}
+
+function validate(title: string, items: EstimateItem[]): FormErrors {
+  const errors: FormErrors = { items: {} };
+
+  if (title.trim().length === 0) {
+    errors.title = '見積タイトルは必須です';
+  }
+
+  items.forEach((item, index) => {
+    const itemErrors: ItemError = {};
+
+    if (item.name.trim().length === 0) {
+      itemErrors.name = '明細名は必須です';
+    }
+
+    if (!(item.price > 0)) {
+      itemErrors.price = '単価は1以上を入力してください';
+    }
+
+    if (!(item.quantity > 0)) {
+      itemErrors.quantity = '数量は1以上を入力してください';
+    }
+
+    if (Object.keys(itemErrors).length > 0) {
+      errors.items[getItemErrorKey(item, index)] = itemErrors;
+    }
+  });
+
+  return errors;
+}
+
+function hasFormErrors(errors: FormErrors): boolean {
+  return Boolean(errors.title) || Object.keys(errors.items).length > 0;
 }
 
 export function EstimateForm({ onCreated }: EstimateFormProps) {
@@ -31,25 +81,13 @@ export function EstimateForm({ onCreated }: EstimateFormProps) {
   const [items, setItems] = useState<EstimateItem[]>([createEmptyItem()]);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [errors, setErrors] = useState<FormErrors>({ items: {} });
 
   const totalAmount = useMemo(() => calculateTotal(items), [items]);
-
-  const canSubmit = useMemo(() => {
-    if (title.trim().length === 0 || items.length === 0) {
-      return false;
-    }
-
-    return items.every((item) => {
-      const trimmedName = item.name.trim();
-      return (
-        trimmedName.length > 0
-        && Number.isFinite(item.price)
-        && Number.isFinite(item.quantity)
-        && item.price >= 0
-        && item.quantity > 0
-      );
-    });
-  }, [title, items]);
+  const hasError = useMemo(() => {
+  const e = validate(title, items);
+  return hasFormErrors(e);
+}, [title, items]);
 
   const updateItem = (index: number, key: 'name' | 'price' | 'quantity', value: string): void => {
     setItems((prevItems) => prevItems.map((item, itemIndex) => {
@@ -87,7 +125,10 @@ export function EstimateForm({ onCreated }: EstimateFormProps) {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
 
-    if (!canSubmit) {
+    const nextErrors = validate(title, items);
+    setErrors(nextErrors);
+
+    if (hasFormErrors(nextErrors)) {
       setErrorMessage('入力内容を確認してください');
       return;
     }
@@ -103,6 +144,7 @@ export function EstimateForm({ onCreated }: EstimateFormProps) {
       setTitle('');
       setItems([createEmptyItem()]);
       setErrorMessage('');
+      setErrors({ items: {} });
       await onCreated();
     } catch (error) {
       const message = error instanceof Error ? error.message : '見積の作成に失敗しました';
@@ -120,51 +162,60 @@ export function EstimateForm({ onCreated }: EstimateFormProps) {
           見積タイトル
           <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="例: 4月Web制作" />
         </label>
+        {errors.title && <p className="error">{errors.title}</p>}
 
-        {items.map((item, index) => (
-          <div key={`estimate-item-${index}`}>
-            <h3>明細 {index + 1}</h3>
+        {items.map((item, index) => {
+          const itemErrorKey = getItemErrorKey(item, index);
+          const itemErrors = errors.items[itemErrorKey];
 
-            <label>
-              明細名
-              <input
-                value={item.name}
-                onChange={(event) => updateItem(index, 'name', event.target.value)}
-                placeholder="例: デザイン費"
-              />
-            </label>
+          return (
+            <div key={item.id}>
+              <h3>明細 {index + 1}</h3>
 
-            <label>
-              単価
-              <input
-                type="number"
-                min="0"
-                value={item.price}
-                onChange={(event) => updateItem(index, 'price', event.target.value)}
-                placeholder="10000"
-              />
-            </label>
+              <label>
+                明細名
+                <input
+                  value={item.name}
+                  onChange={(event) => updateItem(index, 'name', event.target.value)}
+                  placeholder="例: デザイン費"
+                />
+              </label>
+              {itemErrors?.name && <p className="error">{itemErrors.name}</p>}
 
-            <label>
-              数量
-              <input
-                type="number"
-                min="1"
-                value={item.quantity}
-                onChange={(event) => updateItem(index, 'quantity', event.target.value)}
-                placeholder="1"
-              />
-            </label>
+              <label>
+                単価
+                <input
+                  type="number"
+                  min="0"
+                  value={item.price}
+                  onChange={(event) => updateItem(index, 'price', event.target.value)}
+                  placeholder="10000"
+                />
+              </label>
+              {itemErrors?.price && <p className="error">{itemErrors.price}</p>}
 
-            <button
-              type="button"
-              onClick={() => handleRemoveItem(index)}
-              disabled={items.length <= 1 || submitting}
-            >
-              削除
-            </button>
-          </div>
-        ))}
+              <label>
+                数量
+                <input
+                  type="number"
+                  min="1"
+                  value={item.quantity}
+                  onChange={(event) => updateItem(index, 'quantity', event.target.value)}
+                  placeholder="1"
+                />
+              </label>
+              {itemErrors?.quantity && <p className="error">{itemErrors.quantity}</p>}
+
+              <button
+                type="button"
+                onClick={() => handleRemoveItem(index)}
+                disabled={items.length <= 1 || submitting}
+              >
+                削除
+              </button>
+            </div>
+          );
+        })}
 
         <button type="button" onClick={handleAddItem} disabled={submitting}>
           ＋明細追加
@@ -174,7 +225,7 @@ export function EstimateForm({ onCreated }: EstimateFormProps) {
 
         {errorMessage.length > 0 && <p className="error">{errorMessage}</p>}
 
-        <button type="submit" disabled={!canSubmit || submitting}>
+        <button type="submit" disabled={hasError || submitting}>
           {submitting ? '作成中...' : '見積を作成'}
         </button>
       </form>
