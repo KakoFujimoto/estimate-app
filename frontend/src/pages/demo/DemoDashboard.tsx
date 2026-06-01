@@ -1,0 +1,91 @@
+import { Link } from "react-router-dom";
+import { formatYen } from "../../mock/calculations";
+import { loadEstimates } from "../../mock/storage";
+
+export function DemoDashboard() {
+  const estimates = loadEstimates();
+  const recent = [...estimates]
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .slice(0, 5);
+  const totalAmount = estimates.reduce((s, e) => s + e.total, 0);
+
+  return (
+    <div>
+      <h1 className="page-title">ダッシュボード</h1>
+      <p className="page-desc">
+        建築業向け見積作成アプリのモックデモです。見積の作成・出力・マスタ管理を体験できます。
+      </p>
+
+      <div className="demo-stats">
+        <div className="demo-stat-card">
+          <span className="demo-stat-label">見積件数</span>
+          <span className="demo-stat-value">{estimates.length}</span>
+        </div>
+        <div className="demo-stat-card">
+          <span className="demo-stat-label">見積合計（税込）</span>
+          <span className="demo-stat-value">{formatYen(totalAmount)}</span>
+        </div>
+      </div>
+
+      <div className="demo-quick-actions">
+        <Link to="/demo/estimates/new" className="demo-action-card">
+          <strong>＋ 新規見積</strong>
+          <span>テンプレートから作成、リアルタイムプレビュー</span>
+        </Link>
+        <Link to="/demo/masters" className="demo-action-card">
+          <strong>マスタ管理</strong>
+          <span>会社・取引先・品目の登録</span>
+        </Link>
+        <Link to="/demo/settings" className="demo-action-card">
+          <strong>設定</strong>
+          <span>ロゴ・印影、レイアウト、CSVインポート</span>
+        </Link>
+      </div>
+
+      <section className="panel">
+        <div className="section-head">
+          <h2>最近の見積</h2>
+          <Link to="/demo/estimates">すべて見る →</Link>
+        </div>
+        {recent.length === 0 ? (
+          <p>見積がありません。<Link to="/demo/estimates/new">新規作成</Link>してください。</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>タイトル</th>
+                <th>取引先</th>
+                <th>日付</th>
+                <th className="col-num">合計</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recent.map((est) => (
+                <tr key={est.id}>
+                  <td>
+                    <Link to={`/demo/estimates/${est.id}`}>{est.title}</Link>
+                  </td>
+                  <td>{est.customerName}</td>
+                  <td>{est.date}</td>
+                  <td className="col-num">{formatYen(est.total)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <section className="panel demo-feature-list">
+        <h2>このデモで体験できる機能</h2>
+        <ul>
+          <li>見積作成（ドラッグ＆ドロップ並び替え、テンプレート、税率・自動計算）</li>
+          <li>PDF出力（印刷ダイアログ）、CSVエクスポート</li>
+          <li>CSVインポート（他サービスからの移行イメージ）</li>
+          <li>ロゴ・印影の登録と見積への反映</li>
+          <li>マスタ管理（会社・取引先・品目）</li>
+          <li>レイアウト切り替え（標準 / シンプル / 詳細 / モダン）</li>
+        </ul>
+      </section>
+    </div>
+  );
+}
