@@ -1,12 +1,6 @@
-import { useState } from "react";
-import { initializeSampleData } from "../../mock/sampleData";
-import {
-  loadCompanyMaster,
-  loadImage,
-  saveCompanyMaster,
-  saveImage,
-} from "../../mock/storage";
-import { STORAGE_KEYS } from "../../mock/types";
+import { useEffect, useState } from "react";
+import { fetchCompany, updateCompany } from "../../api/masterApi";
+import type { Company } from "../../types/master";
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -18,61 +12,61 @@ function readFileAsDataUrl(file: File): Promise<string> {
 }
 
 export function DemoSettings() {
-  const [logoUrl, setLogoUrl] = useState<string | null>(() => loadImage(STORAGE_KEYS.LOGO));
-  const [stampUrl, setStampUrl] = useState<string | null>(() => loadImage(STORAGE_KEYS.STAMP));
+  const [company, setCompany] = useState<Company | null>(null);
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const handleImageUpload = async (
-    file: File | undefined,
-    key: string,
-    setter: (url: string | null) => void,
-  ) => {
-    if (!file) return;
-    const dataUrl = await readFileAsDataUrl(file);
-    saveImage(key, dataUrl);
-    setter(dataUrl);
+  useEffect(() => {
+    void (async () => {
+      try {
+        setCompany(await fetchCompany());
+      } catch {
+        setError("会社情報の取得に失敗しました");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
-    const company = loadCompanyMaster();
-    if (company) {
-      saveCompanyMaster({
-        ...company,
-        ...(key === STORAGE_KEYS.LOGO ? { logoUrl: dataUrl } : { stampUrl: dataUrl }),
-      });
-    }
-
-    setMessage("画像を登録しました");
+  const saveImages = async (patch: Partial<Company>) => {
+    if (!company) return;
+    const saved = await updateCompany({ ...company, ...patch });
+    setCompany(saved);
+    setMessage("保存しました");
     setTimeout(() => setMessage(""), 2000);
   };
 
-  const handleResetData = async () => {
-    if (!window.confirm("サンプルデータで初期化しますか？（既存データは上書きされます）")) {
-      return;
-    }
-    localStorage.removeItem(STORAGE_KEYS.ESTIMATES);
-    localStorage.removeItem(STORAGE_KEYS.COMPANY_MASTER);
-    localStorage.removeItem(STORAGE_KEYS.CUSTOMER_MASTER);
-    localStorage.removeItem(STORAGE_KEYS.ITEM_MASTER);
-    await initializeSampleData();
-    setMessage("サンプルデータを再読み込みしました。ページを更新してください。");
+  const handleImageUpload = async (
+    file: File | undefined,
+    field: "logoUrl" | "stampUrl",
+  ) => {
+    if (!file || !company) return;
+    const dataUrl = await readFileAsDataUrl(file);
+    await saveImages({ [field]: dataUrl });
   };
+
+  if (loading) return <p>読み込み中...</p>;
+  if (error) return <p className="error">{error}</p>;
+  if (!company) return null;
 
   return (
     <div>
       <h1 className="page-title">設定</h1>
-      <p className="page-desc">ロゴ・印影の登録、データの初期化</p>
+      <p className="page-desc">ロゴ・印影の登録（サーバーに保存）</p>
       {message && <p className="success">{message}</p>}
 
       <section className="panel">
         <h2>画像管理（ロゴ・印影）</h2>
         <p className="demo-hint">
-          アップロードした画像は見積プレビュー・PDF出力に反映されます。SAK画像のURL直リンクにも対応可能な想定です（デモではファイルアップロード）。
+          アップロードした画像は見積プレビュー・PDF出力に反映されます。印影はURL直リンクにも対応しています。
         </p>
 
         <div className="image-upload-grid">
           <div className="image-upload-card">
             <h3>会社ロゴ</h3>
-            {logoUrl ? (
-              <img src={logoUrl} alt="ロゴ" className="upload-preview" />
+            {company.logoUrl ? (
+              <img src={company.logoUrl} alt="ロゴ" className="upload-preview" />
             ) : (
               <div className="upload-placeholder">未登録</div>
             )}
@@ -83,15 +77,16 @@ export function DemoSettings() {
                 accept="image/*"
                 hidden
                 onChange={(e) =>
-                  void handleImageUpload(e.target.files?.[0], STORAGE_KEYS.LOGO, setLogoUrl)
+                  void handleImageUpload(e.target.files?.[0], "logoUrl")
                 }
               />
             </label>
-            {logoUrl && (
-              <button type="button" className="btn-link" onClick={() => {
-                saveImage(STORAGE_KEYS.LOGO, "");
-                setLogoUrl(null);
-              }}>
+            {company.logoUrl && (
+              <button
+                type="button"
+                className="btn-link"
+                onClick={() => void saveImages({ logoUrl: null })}
+              >
                 削除
               </button>
             )}
@@ -99,8 +94,8 @@ export function DemoSettings() {
 
           <div className="image-upload-card">
             <h3>印影</h3>
-            {stampUrl ? (
-              <img src={stampUrl} alt="印影" className="upload-preview stamp-preview" />
+            {company.stampUrl ? (
+              <img src={company.stampUrl} alt="印影" className="upload-preview stamp-preview" />
             ) : (
               <div className="upload-placeholder">未登録</div>
             )}
@@ -111,7 +106,7 @@ export function DemoSettings() {
                 accept="image/*"
                 hidden
                 onChange={(e) =>
-                  void handleImageUpload(e.target.files?.[0], STORAGE_KEYS.STAMP, setStampUrl)
+                  void handleImageUpload(e.target.files?.[0], "stampUrl")
                 }
               />
             </label>
@@ -119,27 +114,26 @@ export function DemoSettings() {
               または URL（直リン）
               <input
                 placeholder="https://..."
+                defaultValue={
+                  company.stampUrl?.startsWith("http") ? company.stampUrl : ""
+                }
                 onBlur={(e) => {
                   const url = e.target.value.trim();
-                  if (url) {
-                    saveImage(STORAGE_KEYS.STAMP, url);
-                    setStampUrl(url);
-                  }
+                  if (url) void saveImages({ stampUrl: url });
                 }}
               />
             </label>
+            {company.stampUrl && (
+              <button
+                type="button"
+                className="btn-link"
+                onClick={() => void saveImages({ stampUrl: null })}
+              >
+                削除
+              </button>
+            )}
           </div>
         </div>
-      </section>
-
-      <section className="panel">
-        <h2>データ管理</h2>
-        <p className="demo-hint">
-          初回起動時にサンプルの見積・マスタが読み込まれます。データをリセットする場合は以下を実行してください。
-        </p>
-        <button type="button" className="btn-secondary" onClick={() => void handleResetData()}>
-          サンプルデータで初期化
-        </button>
       </section>
     </div>
   );

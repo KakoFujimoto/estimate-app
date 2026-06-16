@@ -1,94 +1,130 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import {
-  loadCompanyMaster,
-  loadCustomerMaster,
-  loadItemMaster,
-  saveCompanyMaster,
-  saveCustomerMaster,
-  saveItemMaster,
-} from "../../mock/storage";
-import type {
-  MockCompanyMaster,
-  MockCustomerMaster,
-  MockItemMaster,
-} from "../../mock/types";
+  fetchCompany,
+  fetchCustomers,
+  fetchItemMasters,
+  replaceCustomers,
+  replaceItemMasters,
+  updateCompany,
+} from "../../api/masterApi";
+import type { Company, Customer, ItemMaster } from "../../types/master";
 
 type Tab = "company" | "customer" | "item";
 
 export function DemoMasters() {
   const [tab, setTab] = useState<Tab>("company");
-  const [company, setCompany] = useState<MockCompanyMaster | null>(() => loadCompanyMaster());
-  const [customers, setCustomers] = useState<MockCustomerMaster[]>(() => loadCustomerMaster());
-  const [items, setItems] = useState<MockItemMaster[]>(() => loadItemMaster());
+  const [company, setCompany] = useState<Company | null>(null);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [items, setItems] = useState<ItemMaster[]>([]);
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const [c, cust, itemList] = await Promise.all([
+          fetchCompany(),
+          fetchCustomers(),
+          fetchItemMasters(),
+        ]);
+        setCompany(c);
+        setCustomers(cust);
+        setItems(itemList);
+      } catch {
+        setError("マスタデータの取得に失敗しました");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   const showSaved = () => {
     setMessage("保存しました");
     setTimeout(() => setMessage(""), 2000);
   };
 
-  const saveCompany = (e: FormEvent) => {
+  const saveCompany = async (e: FormEvent) => {
     e.preventDefault();
     if (!company) return;
-    saveCompanyMaster(company);
+    const saved = await updateCompany(company);
+    setCompany(saved);
     showSaved();
   };
 
   const addCustomer = () => {
-    const c: MockCustomerMaster = {
-      id: `customer-${Date.now()}`,
-      name: "",
-      address: "",
-      phone: "",
-    };
-    setCustomers((prev) => [...prev, c]);
+    setCustomers((prev) => [
+      ...prev,
+      { id: 0, name: "", address: "", phone: "", email: null, contactPerson: null },
+    ]);
   };
 
-  const updateCustomer = (id: string, patch: Partial<MockCustomerMaster>) => {
-    setCustomers((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+  const updateCustomer = (index: number, patch: Partial<Customer>) => {
+    setCustomers((prev) =>
+      prev.map((c, i) => (i === index ? { ...c, ...patch } : c)),
+    );
   };
 
-  const removeCustomer = (id: string) => {
-    setCustomers((prev) => prev.filter((c) => c.id !== id));
+  const removeCustomer = (index: number) => {
+    setCustomers((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const saveCustomers = () => {
-    saveCustomerMaster(customers);
+  const saveCustomers = async () => {
+    const input = customers.map(({ name, address, phone, email, contactPerson }) => ({
+      name,
+      address,
+      phone,
+      email: email ?? undefined,
+      contactPerson: contactPerson ?? undefined,
+    }));
+    const saved = await replaceCustomers(input);
+    setCustomers(saved);
     showSaved();
   };
 
   const addItem = () => {
-    const item: MockItemMaster = {
-      id: `item-${Date.now()}`,
-      name: "",
-      category: "その他",
-      unit: "式",
-      defaultUnitPrice: 0,
-    };
-    setItems((prev) => [...prev, item]);
+    setItems((prev) => [
+      ...prev,
+      {
+        id: 0,
+        name: "",
+        category: "その他",
+        unit: "式",
+        defaultUnitPrice: 0,
+        note: null,
+      },
+    ]);
   };
 
-  const updateItem = (id: string, patch: Partial<MockItemMaster>) => {
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
+  const updateItem = (index: number, patch: Partial<ItemMaster>) => {
+    setItems((prev) => prev.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   };
 
-  const removeItem = (id: string) => {
-    setItems((prev) => prev.filter((i) => i.id !== id));
+  const removeItem = (index: number) => {
+    setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const saveItems = () => {
-    saveItemMaster(items);
+  const saveItems = async () => {
+    const input = items.map(({ name, category, unit, defaultUnitPrice, note }) => ({
+      name,
+      category,
+      unit,
+      defaultUnitPrice,
+      note: note ?? undefined,
+    }));
+    const saved = await replaceItemMasters(input);
+    setItems(saved);
     showSaved();
   };
 
-  if (!company) {
-    return <p>会社マスタが未設定です。設定画面から初期化してください。</p>;
-  }
+  if (loading) return <p>読み込み中...</p>;
+  if (error) return <p className="error">{error}</p>;
+  if (!company) return <p>会社マスタが未設定です。</p>;
 
   return (
     <div>
       <h1 className="page-title">マスタ管理</h1>
-      <p className="page-desc">会社・取引先・品目の基本データを管理します（ローカル保存）</p>
+      <p className="page-desc">会社・取引先・品目の基本データを管理します</p>
       {message && <p className="success">{message}</p>}
 
       <div className="tab-bar">
@@ -112,7 +148,7 @@ export function DemoMasters() {
 
       {tab === "company" && (
         <section className="panel">
-          <form onSubmit={saveCompany} className="form-grid">
+          <form onSubmit={(e) => void saveCompany(e)} className="form-grid">
             <h2>会社情報</h2>
             <label>
               会社名
@@ -166,27 +202,27 @@ export function DemoMasters() {
             </button>
           </div>
           <div className="master-cards">
-            {customers.map((c) => (
-              <div key={c.id} className="master-card form-grid">
+            {customers.map((c, index) => (
+              <div key={c.id || `new-${index}`} className="master-card form-grid">
                 <label>
                   会社名
                   <input
                     value={c.name}
-                    onChange={(e) => updateCustomer(c.id, { name: e.target.value })}
+                    onChange={(e) => updateCustomer(index, { name: e.target.value })}
                   />
                 </label>
                 <label>
                   住所
                   <input
                     value={c.address}
-                    onChange={(e) => updateCustomer(c.id, { address: e.target.value })}
+                    onChange={(e) => updateCustomer(index, { address: e.target.value })}
                   />
                 </label>
                 <label>
                   電話
                   <input
                     value={c.phone}
-                    onChange={(e) => updateCustomer(c.id, { phone: e.target.value })}
+                    onChange={(e) => updateCustomer(index, { phone: e.target.value })}
                   />
                 </label>
                 <label>
@@ -194,21 +230,21 @@ export function DemoMasters() {
                   <input
                     value={c.contactPerson ?? ""}
                     onChange={(e) =>
-                      updateCustomer(c.id, { contactPerson: e.target.value })
+                      updateCustomer(index, { contactPerson: e.target.value })
                     }
                   />
                 </label>
                 <button
                   type="button"
                   className="btn-link btn-danger"
-                  onClick={() => removeCustomer(c.id)}
+                  onClick={() => removeCustomer(index)}
                 >
                   削除
                 </button>
               </div>
             ))}
           </div>
-          <button type="button" onClick={saveCustomers}>
+          <button type="button" onClick={() => void saveCustomers()}>
             一括保存
           </button>
         </section>
@@ -233,24 +269,24 @@ export function DemoMasters() {
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
-                <tr key={item.id}>
+              {items.map((item, index) => (
+                <tr key={item.id || `new-${index}`}>
                   <td>
                     <input
                       value={item.name}
-                      onChange={(e) => updateItem(item.id, { name: e.target.value })}
+                      onChange={(e) => updateItem(index, { name: e.target.value })}
                     />
                   </td>
                   <td>
                     <input
                       value={item.category}
-                      onChange={(e) => updateItem(item.id, { category: e.target.value })}
+                      onChange={(e) => updateItem(index, { category: e.target.value })}
                     />
                   </td>
                   <td>
                     <input
                       value={item.unit}
-                      onChange={(e) => updateItem(item.id, { unit: e.target.value })}
+                      onChange={(e) => updateItem(index, { unit: e.target.value })}
                     />
                   </td>
                   <td>
@@ -259,7 +295,7 @@ export function DemoMasters() {
                       className="input-num"
                       value={item.defaultUnitPrice}
                       onChange={(e) =>
-                        updateItem(item.id, {
+                        updateItem(index, {
                           defaultUnitPrice: Number(e.target.value),
                         })
                       }
@@ -269,7 +305,7 @@ export function DemoMasters() {
                     <button
                       type="button"
                       className="btn-link btn-danger"
-                      onClick={() => removeItem(item.id)}
+                      onClick={() => removeItem(index)}
                     >
                       削除
                     </button>
@@ -278,7 +314,7 @@ export function DemoMasters() {
               ))}
             </tbody>
           </table>
-          <button type="button" onClick={saveItems}>
+          <button type="button" onClick={() => void saveItems()}>
             一括保存
           </button>
         </section>

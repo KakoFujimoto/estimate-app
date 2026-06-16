@@ -1,7 +1,6 @@
-import type { MockCompanyMaster, MockEstimate } from "./types";
-import { formatDateJa, formatYen } from "./calculations";
-import { loadImage } from "./storage";
-import { STORAGE_KEYS } from "./types";
+import type { Company } from "../types/master";
+import type { Estimate } from "../types/estimate";
+import { formatDateJa, formatYen } from "../utils/calculations";
 
 export interface PrintOptions {
   title: string;
@@ -50,13 +49,11 @@ export function printDocument(options: PrintOptions): void {
 }
 
 export function buildEstimatePrintHtml(
-  estimate: MockEstimate,
-  company: MockCompanyMaster | null,
+  estimate: Estimate,
+  company: Company | null,
 ): string {
-  const logo =
-    estimate.logoUrl ?? company?.logoUrl ?? loadImage(STORAGE_KEYS.LOGO) ?? undefined;
-  const stamp =
-    estimate.stampUrl ?? company?.stampUrl ?? loadImage(STORAGE_KEYS.STAMP) ?? undefined;
+  const logo = estimate.logoUrl ?? company?.logoUrl;
+  const stamp = estimate.stampUrl ?? company?.stampUrl;
 
   const itemRows = estimate.items
     .map(
@@ -104,8 +101,8 @@ export function buildEstimatePrintHtml(
 }
 
 export function printEstimate(
-  estimate: MockEstimate,
-  company: MockCompanyMaster | null,
+  estimate: Estimate,
+  company: Company | null,
 ): void {
   printDocument({
     title: `${estimate.title} - 見積書`,

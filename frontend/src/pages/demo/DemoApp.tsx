@@ -1,7 +1,5 @@
-import { useEffect } from "react";
 import { NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
-import { useMockAuth } from "../../contexts/MockAuthContext";
-import { initializeSampleData } from "../../mock/sampleData";
+import { useAuth } from "../../contexts/AuthContext";
 
 const navItems = [
   { to: "/demo", label: "ホーム", end: true },
@@ -12,12 +10,12 @@ const navItems = [
 ];
 
 export function DemoApp() {
-  const { isAuthenticated, user, logout } = useMockAuth();
+  const { isAuthenticated, isLoading, user, logout } = useAuth();
   const location = useLocation();
 
-  useEffect(() => {
-    void initializeSampleData();
-  }, []);
+  if (isLoading) {
+    return <p className="demo-login-page">読み込み中...</p>;
+  }
 
   if (!isAuthenticated && !location.pathname.endsWith("/login")) {
     return <Navigate to="/demo/login" replace />;
@@ -34,7 +32,7 @@ export function DemoApp() {
           <span className="demo-brand-icon">見</span>
           <div>
             <strong>Estimate App</strong>
-            <small>建築見積デモ</small>
+            <small>建築見積</small>
           </div>
         </div>
 
@@ -64,7 +62,7 @@ export function DemoApp() {
 
       <div className="demo-main">
         <header className="demo-topbar">
-          <span className="demo-demo-badge">モックデモ（ローカル保存）</span>
+          <span className="demo-demo-badge">API連携（SQLite保存）</span>
         </header>
         <div className="demo-content">
           <Outlet />

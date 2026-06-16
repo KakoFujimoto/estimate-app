@@ -1,28 +1,33 @@
 import { DragEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { EstimatePreview } from "../../components/demo/EstimatePreview";
-import { calcItemTotal, recalcEstimate } from "../../mock/calculations";
-import { estimateToCsv, downloadCsv, parseCsvToItems } from "../../mock/csvUtils";
-import { printEstimate } from "../../mock/exportUtils";
 import {
-  loadCompanyMaster,
-  loadCustomerMaster,
-  loadEstimates,
-  loadItemMaster,
-  saveEstimates,
-  getMaxEstimateId,
-  generateId,
-} from "../../mock/storage";
-import { estimateTemplates } from "../../mock/templates";
-import type {
-  MockEstimate,
-  MockEstimateItem,
-  MockLayoutType,
-} from "../../mock/types";
+  createEstimate,
+  fetchEstimateById,
+  updateEstimate,
+} from "../../api/estimateApi";
+import {
+  fetchCompany,
+  fetchCustomers,
+  fetchItemMasters,
+} from "../../api/masterApi";
+import { EstimatePreview } from "../../components/demo/EstimatePreview";
+import type { Estimate, EstimateItem, LayoutType } from "../../types/estimate";
+import type { Company, Customer, ItemMaster } from "../../types/master";
+import {
+  calcItemTotal,
+  recalcEstimate,
+  toEstimateInput,
+} from "../../utils/calculations";
+import { downloadCsv, estimateToCsv, parseCsvToItems } from "../../utils/csvUtils";
+import { printEstimate } from "../../utils/exportUtils";
+import { estimateTemplates } from "../../utils/templates";
 
-function createEmptyItem(): MockEstimateItem {
+let tempItemId = -1;
+
+function createEmptyItem(): EstimateItem {
+  tempItemId -= 1;
   return {
-    id: `item-${crypto.randomUUID()}`,
+    id: tempItemId,
     name: "",
     quantity: 1,
     unit: "式",
@@ -31,18 +36,14 @@ function createEmptyItem(): MockEstimateItem {
   };
 }
 
-function createNewEstimate(): MockEstimate {
-  const year = new Date().getFullYear();
-  const maxId = getMaxEstimateId();
-  const num = maxId + 1;
+function createNewDraft(): Estimate {
   const now = new Date().toISOString();
-  const today = now.slice(0, 10);
-
+  const year = new Date().getFullYear();
   return recalcEstimate({
-    id: generateId("estimate", maxId),
+    id: 0,
     title: "",
-    estimateNumber: `見積第${year}-${String(num).padStart(3, "0")}号`,
-    date: today,
+    estimateNumber: `見積第${year}-XXX号`,
+    date: now.slice(0, 10),
     customerName: "",
     items: [createEmptyItem()],
     subtotal: 0,
@@ -60,30 +61,56 @@ export function DemoEstimateEditor() {
   const navigate = useNavigate();
   const isNew = id === "new";
 
-  const [estimate, setEstimate] = useState<MockEstimate>(() => {
-    if (isNew) return createNewEstimate();
-    const found = loadEstimates().find((e) => e.id === id);
-    return found ?? createNewEstimate();
-  });
+  const [estimate, setEstimate] = useState<Estimate>(() =>
+    isNew ? createNewDraft() : createNewDraft(),
+  );
+  const [company, setCompany] = useState<Company | null>(null);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [itemMasters, setItemMasters] = useState<ItemMaster[]>([]);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [savedMessage, setSavedMessage] = useState("");
-
-  const company = loadCompanyMaster();
-  const customers = loadCustomerMaster();
-  const itemMasters = loadItemMaster();
+  const [loading, setLoading] = useState(!isNew);
+  const [notFound, setNotFound] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!isNew && id) {
-      const found = loadEstimates().find((e) => e.id === id);
-      if (found) setEstimate(found);
-    }
+    void (async () => {
+      try {
+        const [c, cust, items] = await Promise.all([
+          fetchCompany(),
+          fetchCustomers(),
+          fetchItemMasters(),
+        ]);
+        setCompany(c);
+        setCustomers(cust);
+        setItemMasters(items);
+      } catch {
+        // masters load error handled silently; save will still work
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (isNew || !id) return;
+    void (async () => {
+      setLoading(true);
+      try {
+        const data = await fetchEstimateById(Number(id));
+        setEstimate(recalcEstimate(data));
+        setNotFound(false);
+      } catch {
+        setNotFound(true);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [id, isNew]);
 
-  const updateEstimate = useCallback((patch: Partial<MockEstimate>) => {
+  const updateEstimateState = useCallback((patch: Partial<Estimate>) => {
     setEstimate((prev) => recalcEstimate({ ...prev, ...patch }));
   }, []);
 
-  const updateItem = (index: number, patch: Partial<MockEstimateItem>) => {
+  const updateItem = (index: number, patch: Partial<EstimateItem>) => {
     setEstimate((prev) => {
       const items = prev.items.map((item, i) => {
         if (i !== index) return item;
@@ -94,10 +121,10 @@ export function DemoEstimateEditor() {
     });
   };
 
-  const addItem = (fromMaster?: (typeof itemMasters)[0]) => {
+  const addItem = (fromMaster?: ItemMaster) => {
     const newItem = fromMaster
       ? {
-          id: `item-${crypto.randomUUID()}`,
+          ...createEmptyItem(),
           name: fromMaster.name,
           quantity: 1,
           unit: fromMaster.unit,
@@ -123,15 +150,19 @@ export function DemoEstimateEditor() {
   const applyTemplate = (templateId: string) => {
     const tpl = estimateTemplates.find((t) => t.id === templateId);
     if (!tpl) return;
-    const items: MockEstimateItem[] = tpl.items.map((item) => ({
-      ...item,
-      id: `item-${crypto.randomUUID()}`,
+    const items: EstimateItem[] = tpl.items.map((item) => ({
+      ...createEmptyItem(),
+      name: item.name,
+      quantity: item.quantity,
+      unit: item.unit,
+      unitPrice: item.unitPrice,
       totalPrice: calcItemTotal(item),
+      note: item.note ?? null,
     }));
-    updateEstimate({
+    updateEstimateState({
       title: tpl.title,
       layout: tpl.layout,
-      note: tpl.note,
+      note: tpl.note ?? null,
       items,
     });
   };
@@ -152,22 +183,33 @@ export function DemoEstimateEditor() {
 
   const handleDragEnd = () => setDragIndex(null);
 
-  const handleSave = () => {
-    const all = loadEstimates();
-    const idx = all.findIndex((e) => e.id === estimate.id);
-    const next = idx >= 0 ? all.map((e, i) => (i === idx ? estimate : e)) : [...all, estimate];
-    saveEstimates(next);
-    setSavedMessage("保存しました");
-    setTimeout(() => setSavedMessage(""), 2000);
-    if (isNew) navigate(`/demo/estimates/${estimate.id}`, { replace: true });
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const input = toEstimateInput(recalcEstimate(estimate));
+      if (isNew || estimate.id === 0) {
+        const saved = await createEstimate(input);
+        setSavedMessage("保存しました");
+        navigate(`/demo/estimates/${saved.id}`, { replace: true });
+      } else {
+        const saved = await updateEstimate(estimate.id, input);
+        setEstimate(recalcEstimate(saved));
+        setSavedMessage("保存しました");
+      }
+      setTimeout(() => setSavedMessage(""), 2000);
+    } catch {
+      alert("保存に失敗しました");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleExportCsv = () => {
-    downloadCsv(`${estimate.title || "見積"}.csv`, estimateToCsv(estimate));
+    downloadCsv(`${estimate.title || "見積"}.csv`, estimateToCsv(recalcEstimate(estimate)));
   };
 
   const handleExportPdf = () => {
-    printEstimate(estimate, company);
+    printEstimate(recalcEstimate(estimate), company);
   };
 
   const handleImportCsv = (file: File) => {
@@ -179,14 +221,19 @@ export function DemoEstimateEditor() {
         alert(result.error);
         return;
       }
-      updateEstimate({ items: result.items });
+      const items: EstimateItem[] = result.items.map((item) => ({
+        ...createEmptyItem(),
+        ...item,
+        totalPrice: calcItemTotal(item),
+      }));
+      updateEstimateState({ items });
     };
     reader.readAsText(file);
   };
 
   const previewEstimate = useMemo(() => recalcEstimate(estimate), [estimate]);
 
-  const notFound = !isNew && id && !loadEstimates().some((e) => e.id === id);
+  if (loading) return <p>読み込み中...</p>;
 
   if (notFound) {
     return (
@@ -214,8 +261,13 @@ export function DemoEstimateEditor() {
           <button type="button" className="btn-secondary" onClick={handleExportPdf}>
             PDF（印刷）
           </button>
-          <button type="button" className="btn-primary" onClick={handleSave}>
-            保存
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => void handleSave()}
+            disabled={saving}
+          >
+            {saving ? "保存中..." : "保存"}
           </button>
         </div>
       </div>
@@ -245,7 +297,7 @@ export function DemoEstimateEditor() {
               見積タイトル
               <input
                 value={estimate.title}
-                onChange={(e) => updateEstimate({ title: e.target.value })}
+                onChange={(e) => updateEstimateState({ title: e.target.value })}
                 placeholder="例: A様邸 新築工事"
               />
             </label>
@@ -253,7 +305,9 @@ export function DemoEstimateEditor() {
               見積番号
               <input
                 value={estimate.estimateNumber}
-                onChange={(e) => updateEstimate({ estimateNumber: e.target.value })}
+                onChange={(e) =>
+                  updateEstimateState({ estimateNumber: e.target.value })
+                }
               />
             </label>
             <label>
@@ -261,7 +315,7 @@ export function DemoEstimateEditor() {
               <input
                 type="date"
                 value={estimate.date}
-                onChange={(e) => updateEstimate({ date: e.target.value })}
+                onChange={(e) => updateEstimateState({ date: e.target.value })}
               />
             </label>
             <label>
@@ -269,9 +323,9 @@ export function DemoEstimateEditor() {
               <select
                 value=""
                 onChange={(e) => {
-                  const c = customers.find((x) => x.id === e.target.value);
+                  const c = customers.find((x) => x.id === Number(e.target.value));
                   if (c) {
-                    updateEstimate({
+                    updateEstimateState({
                       customerName: c.name,
                       customerAddress: c.address,
                       customerPhone: c.phone,
@@ -292,21 +346,27 @@ export function DemoEstimateEditor() {
               取引先名
               <input
                 value={estimate.customerName}
-                onChange={(e) => updateEstimate({ customerName: e.target.value })}
+                onChange={(e) =>
+                  updateEstimateState({ customerName: e.target.value })
+                }
               />
             </label>
             <label>
               住所
               <input
                 value={estimate.customerAddress ?? ""}
-                onChange={(e) => updateEstimate({ customerAddress: e.target.value })}
+                onChange={(e) =>
+                  updateEstimateState({ customerAddress: e.target.value })
+                }
               />
             </label>
             <label>
               電話
               <input
                 value={estimate.customerPhone ?? ""}
-                onChange={(e) => updateEstimate({ customerPhone: e.target.value })}
+                onChange={(e) =>
+                  updateEstimateState({ customerPhone: e.target.value })
+                }
               />
             </label>
             <label>
@@ -314,7 +374,9 @@ export function DemoEstimateEditor() {
               <select
                 value={estimate.layout}
                 onChange={(e) =>
-                  updateEstimate({ layout: e.target.value as MockLayoutType })
+                  updateEstimateState({
+                    layout: e.target.value as LayoutType,
+                  })
                 }
               >
                 <option value="standard">標準</option>
@@ -331,7 +393,7 @@ export function DemoEstimateEditor() {
                 max={100}
                 value={estimate.taxRate}
                 onChange={(e) =>
-                  updateEstimate({ taxRate: Number(e.target.value) || 0 })
+                  updateEstimateState({ taxRate: Number(e.target.value) || 0 })
                 }
               />
             </label>
@@ -340,7 +402,7 @@ export function DemoEstimateEditor() {
               <textarea
                 rows={3}
                 value={estimate.note ?? ""}
-                onChange={(e) => updateEstimate({ note: e.target.value })}
+                onChange={(e) => updateEstimateState({ note: e.target.value })}
                 placeholder="自由記述の備考欄"
               />
             </label>
@@ -367,7 +429,7 @@ export function DemoEstimateEditor() {
                   className="master-select"
                   value=""
                   onChange={(e) => {
-                    const m = itemMasters.find((x) => x.id === e.target.value);
+                    const m = itemMasters.find((x) => x.id === Number(e.target.value));
                     if (m) addItem(m);
                     e.target.value = "";
                   }}

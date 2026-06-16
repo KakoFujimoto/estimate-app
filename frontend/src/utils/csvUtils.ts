@@ -1,9 +1,9 @@
-import type { MockEstimate, MockEstimateItem } from "./types";
+import type { Estimate, EstimateItem } from "../types/estimate";
 import { calcItemTotal } from "./calculations";
 
 const CSV_HEADERS = ["品目", "数量", "単位", "単価", "金額", "備考"] as const;
 
-export function estimateToCsv(estimate: MockEstimate): string {
+export function estimateToCsv(estimate: Estimate): string {
   const rows: string[][] = [
     ["見積タイトル", estimate.title],
     ["見積番号", estimate.estimateNumber],
@@ -43,7 +43,7 @@ export function downloadCsv(filename: string, content: string): void {
 }
 
 export type CsvImportResult =
-  | { ok: true; items: MockEstimateItem[] }
+  | { ok: true; items: Omit<EstimateItem, "id">[] }
   | { ok: false; error: string };
 
 export function parseCsvToItems(csvText: string): CsvImportResult {
@@ -66,7 +66,7 @@ export function parseCsvToItems(csvText: string): CsvImportResult {
     ? lines.slice(lines.indexOf(headerLine) + 1)
     : lines;
 
-  const items: MockEstimateItem[] = [];
+  const items: Omit<EstimateItem, "id">[] = [];
   let rowNum = 0;
 
   for (const line of dataLines) {
@@ -85,16 +85,14 @@ export function parseCsvToItems(csvText: string): CsvImportResult {
       continue;
     }
 
-    const item: MockEstimateItem = {
-      id: `import-${Date.now()}-${rowNum}`,
+    items.push({
       name,
       quantity,
       unit,
       unitPrice,
       totalPrice: calcItemTotal({ quantity, unitPrice }),
-      note: cells[5]?.trim() || undefined,
-    };
-    items.push(item);
+      note: cells[5]?.trim() || null,
+    });
     rowNum += 1;
   }
 

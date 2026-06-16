@@ -1,36 +1,43 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { formatYen } from "../../mock/calculations";
-import { loadEstimates, saveEstimates } from "../../mock/storage";
-import type { MockEstimate } from "../../mock/types";
+import {
+  deleteEstimate,
+  duplicateEstimate,
+  fetchEstimates,
+} from "../../api/estimateApi";
+import type { Estimate } from "../../types/estimate";
+import { formatYen } from "../../utils/calculations";
 
 export function DemoEstimateList() {
-  const [estimates, setEstimates] = useState<MockEstimate[]>(() => loadEstimates());
+  const [estimates, setEstimates] = useState<Estimate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleDelete = (id: string) => {
-    if (!window.confirm("この見積を削除しますか？")) return;
-    const next = estimates.filter((e) => e.id !== id);
-    saveEstimates(next);
-    setEstimates(next);
+  const load = async () => {
+    setLoading(true);
+    try {
+      setEstimates(await fetchEstimates());
+      setError("");
+    } catch {
+      setError("見積一覧の取得に失敗しました");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDuplicate = (est: MockEstimate) => {
-    const copy: MockEstimate = {
-      ...est,
-      id: `estimate-${Date.now()}`,
-      title: `${est.title}（コピー）`,
-      estimateNumber: `見積第${new Date().getFullYear()}-${String(estimates.length + 1).padStart(3, "0")}号`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      items: est.items.map((item) => ({
-        ...item,
-        id: `${item.id}-copy-${Date.now()}`,
-      })),
-    };
-    const next = [...estimates, copy];
-    saveEstimates(next);
-    setEstimates(next);
+  useEffect(() => {
+    void load();
+  }, []);
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm("この見積を削除しますか？")) return;
+    await deleteEstimate(id);
+    await load();
+  };
+
+  const handleDuplicate = async (id: number) => {
+    const copy = await duplicateEstimate(id);
     navigate(`/demo/estimates/${copy.id}`);
   };
 
@@ -46,12 +53,15 @@ export function DemoEstimateList() {
         </Link>
       </div>
 
+      {error && <p className="error">{error}</p>}
+
       <section className="panel">
-        {estimates.length === 0 ? (
+        {loading ? (
+          <p>読み込み中...</p>
+        ) : estimates.length === 0 ? (
           <p>
             見積がありません。
-            <Link to="/demo/estimates/new">新規作成</Link>
-            するか、サンプルデータを再読み込みしてください。
+            <Link to="/demo/estimates/new">新規作成</Link>してください。
           </p>
         ) : (
           <table>
@@ -82,14 +92,14 @@ export function DemoEstimateList() {
                     <button
                       type="button"
                       className="btn-link"
-                      onClick={() => handleDuplicate(est)}
+                      onClick={() => void handleDuplicate(est.id)}
                     >
                       複製
                     </button>
                     <button
                       type="button"
                       className="btn-link btn-danger"
-                      onClick={() => handleDelete(est.id)}
+                      onClick={() => void handleDelete(est.id)}
                     >
                       削除
                     </button>

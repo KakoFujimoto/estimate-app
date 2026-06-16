@@ -1,29 +1,48 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { formatYen } from "../../mock/calculations";
-import { loadEstimates } from "../../mock/storage";
+import { fetchEstimates } from "../../api/estimateApi";
+import type { Estimate } from "../../types/estimate";
+import { formatYen } from "../../utils/calculations";
 
 export function DemoDashboard() {
-  const estimates = loadEstimates();
-  const recent = [...estimates]
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-    .slice(0, 5);
+  const [estimates, setEstimates] = useState<Estimate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        setEstimates(await fetchEstimates());
+      } catch {
+        setError("見積データの取得に失敗しました");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const recent = estimates.slice(0, 5);
   const totalAmount = estimates.reduce((s, e) => s + e.total, 0);
 
   return (
     <div>
       <h1 className="page-title">ダッシュボード</h1>
       <p className="page-desc">
-        建築業向け見積作成アプリのモックデモです。見積の作成・出力・マスタ管理を体験できます。
+        建築業向け見積作成アプリです。データはサーバー（SQLite）に保存されます。
       </p>
+
+      {error && <p className="error">{error}</p>}
 
       <div className="demo-stats">
         <div className="demo-stat-card">
           <span className="demo-stat-label">見積件数</span>
-          <span className="demo-stat-value">{estimates.length}</span>
+          <span className="demo-stat-value">{loading ? "…" : estimates.length}</span>
         </div>
         <div className="demo-stat-card">
           <span className="demo-stat-label">見積合計（税込）</span>
-          <span className="demo-stat-value">{formatYen(totalAmount)}</span>
+          <span className="demo-stat-value">
+            {loading ? "…" : formatYen(totalAmount)}
+          </span>
         </div>
       </div>
 
@@ -47,8 +66,12 @@ export function DemoDashboard() {
           <h2>最近の見積</h2>
           <Link to="/demo/estimates">すべて見る →</Link>
         </div>
-        {recent.length === 0 ? (
-          <p>見積がありません。<Link to="/demo/estimates/new">新規作成</Link>してください。</p>
+        {loading ? (
+          <p>読み込み中...</p>
+        ) : recent.length === 0 ? (
+          <p>
+            見積がありません。<Link to="/demo/estimates/new">新規作成</Link>してください。
+          </p>
         ) : (
           <table>
             <thead>
@@ -73,18 +96,6 @@ export function DemoDashboard() {
             </tbody>
           </table>
         )}
-      </section>
-
-      <section className="panel demo-feature-list">
-        <h2>このデモで体験できる機能</h2>
-        <ul>
-          <li>見積作成（ドラッグ＆ドロップ並び替え、テンプレート、税率・自動計算）</li>
-          <li>PDF出力（印刷ダイアログ）、CSVエクスポート</li>
-          <li>CSVインポート（他サービスからの移行イメージ）</li>
-          <li>ロゴ・印影の登録と見積への反映</li>
-          <li>マスタ管理（会社・取引先・品目）</li>
-          <li>レイアウト切り替え（標準 / シンプル / 詳細 / モダン）</li>
-        </ul>
       </section>
     </div>
   );

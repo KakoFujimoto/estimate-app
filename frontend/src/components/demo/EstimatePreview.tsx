@@ -1,15 +1,14 @@
-import type { MockCompanyMaster, MockEstimate, MockLayoutType } from "../../mock/types";
-import { formatDateJa, formatYen } from "../../mock/calculations";
-import { loadImage } from "../../mock/storage";
-import { STORAGE_KEYS } from "../../mock/types";
+import type { Company } from "../../types/master";
+import type { Estimate, LayoutType } from "../../types/estimate";
+import { formatDateJa, formatYen } from "../../utils/calculations";
 
 type EstimatePreviewProps = {
-  estimate: MockEstimate;
-  company: MockCompanyMaster | null;
-  layout?: MockLayoutType;
+  estimate: Estimate;
+  company: Company | null;
+  layout?: LayoutType;
 };
 
-const layoutLabels: Record<MockLayoutType, string> = {
+const layoutLabels: Record<LayoutType, string> = {
   standard: "標準",
   simple: "シンプル",
   detailed: "詳細",
@@ -18,10 +17,8 @@ const layoutLabels: Record<MockLayoutType, string> = {
 
 export function EstimatePreview({ estimate, company, layout }: EstimatePreviewProps) {
   const activeLayout = layout ?? estimate.layout;
-  const logo =
-    estimate.logoUrl ?? company?.logoUrl ?? loadImage(STORAGE_KEYS.LOGO) ?? undefined;
-  const stamp =
-    estimate.stampUrl ?? company?.stampUrl ?? loadImage(STORAGE_KEYS.STAMP) ?? undefined;
+  const logo = estimate.logoUrl ?? company?.logoUrl;
+  const stamp = estimate.stampUrl ?? company?.stampUrl;
 
   return (
     <div className={`estimate-preview layout-${activeLayout}`}>
@@ -64,7 +61,7 @@ export function EstimatePreview({ estimate, company, layout }: EstimatePreviewPr
             <th className="col-num">数量</th>
             <th>単位</th>
             <th className="col-num">単価</th>
-            <th className="col-num">金額</th>
+            <th className="col-num">金顡</th>
             {activeLayout === "detailed" && <th>備考</th>}
           </tr>
         </thead>

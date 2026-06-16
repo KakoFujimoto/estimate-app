@@ -1,10 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import App from './App';
-import { MockAuthProvider } from './contexts/MockAuthContext';
+import { AuthProvider } from './contexts/AuthContext';
 import './index.css';
-import EstimateDetail from './pages/EstimateDetail';
 import { DemoApp } from './pages/demo/DemoApp';
 import { DemoDashboard } from './pages/demo/DemoDashboard';
 import { DemoEstimateEditor } from './pages/demo/DemoEstimateEditor';
@@ -16,11 +14,9 @@ import { DemoSettings } from './pages/demo/DemoSettings';
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <BrowserRouter>
-      <MockAuthProvider>
+      <AuthProvider>
         <Routes>
           <Route path="/" element={<Navigate to="/demo" replace />} />
-          <Route path="/legacy" element={<App />} />
-          <Route path="/estimates/:id" element={<EstimateDetail />} />
           <Route path="/demo" element={<DemoApp />}>
             <Route index element={<DemoDashboard />} />
             <Route path="login" element={<DemoLogin />} />
@@ -30,8 +26,9 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
             <Route path="masters" element={<DemoMasters />} />
             <Route path="settings" element={<DemoSettings />} />
           </Route>
+          <Route path="*" element={<Navigate to="/demo" replace />} />
         </Routes>
-      </MockAuthProvider>
+      </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>,
 );

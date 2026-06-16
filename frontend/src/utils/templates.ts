@@ -1,12 +1,18 @@
-import type { MockEstimate, MockLayoutType } from "./types";
+import type { LayoutType } from "../types/estimate";
 
 export interface EstimateTemplate {
   id: string;
   name: string;
   description: string;
-  layout: MockLayoutType;
+  layout: LayoutType;
   title: string;
-  items: Omit<MockEstimate["items"][number], "id" | "totalPrice">[];
+  items: {
+    name: string;
+    quantity: number;
+    unit: string;
+    unitPrice: number;
+    note?: string;
+  }[];
   note?: string;
 }
 

@@ -1,9 +1,10 @@
 import { FormEvent, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { useMockAuth } from "../../contexts/MockAuthContext";
+import { ApiError } from "../../api/client";
+import { useAuth } from "../../contexts/AuthContext";
 
 export function DemoLogin() {
-  const { isAuthenticated, login, resetPassword } = useMockAuth();
+  const { isAuthenticated, login, resetPassword } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("demo@sample-construction.jp");
   const [password, setPassword] = useState("demo1234");
@@ -19,21 +20,31 @@ export function DemoLogin() {
     e.preventDefault();
     setLoading(true);
     setMessage("");
-    const ok = await login(email, password);
-    setLoading(false);
-    if (ok) {
-      navigate("/demo");
-    } else {
-      setMessage("ログインに失敗しました");
+    try {
+      const ok = await login(email, password);
+      if (ok) navigate("/demo");
+    } catch (error) {
+      setMessage(
+        error instanceof ApiError
+          ? error.message
+          : "ログインに失敗しました",
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleReset = async () => {
     setLoading(true);
-    await resetPassword(email);
-    setLoading(false);
-    setMessage("パスワードリセット用のメールを送信しました（デモ）");
-    setShowReset(false);
+    try {
+      await resetPassword(email);
+      setMessage("パスワードリセット用のメールを送信しました");
+      setShowReset(false);
+    } catch {
+      setMessage("送信に失敗しました");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -49,7 +60,7 @@ export function DemoLogin() {
 
         <h1>ログイン</h1>
         <p className="demo-hint">
-          デモ用です。任意のメール・パスワードでログインできます。
+          初期ユーザー: demo@sample-construction.jp / demo1234
         </p>
 
         {!showReset ? (
@@ -72,7 +83,11 @@ export function DemoLogin() {
                 autoComplete="current-password"
               />
             </label>
-            {message && <p className={message.includes("失敗") ? "error" : "success"}>{message}</p>}
+            {message && (
+              <p className={message.includes("失敗") ? "error" : "success"}>
+                {message}
+              </p>
+            )}
             <button type="submit" disabled={loading}>
               {loading ? "ログイン中..." : "ログイン"}
             </button>
@@ -86,7 +101,7 @@ export function DemoLogin() {
           </form>
         ) : (
           <div className="form-grid">
-            <p>登録メールアドレスにリセットリンクを送信します（モック）</p>
+            <p>登録メールアドレスにリセットリンクを送信します</p>
             <label>
               メールアドレス
               <input
