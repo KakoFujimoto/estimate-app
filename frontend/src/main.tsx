@@ -8,6 +8,7 @@ import { DemoDashboard } from './pages/demo/DemoDashboard';
 import { DemoEstimateEditor } from './pages/demo/DemoEstimateEditor';
 import { DemoEstimateList } from './pages/demo/DemoEstimateList';
 import { DemoLogin } from './pages/demo/DemoLogin';
+import { DemoCustomerDetail } from './pages/demo/DemoCustomerDetail';
 import { DemoMasters } from './pages/demo/DemoMasters';
 import { DemoSettings } from './pages/demo/DemoSettings';
 
@@ -23,6 +24,7 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
             <Route path="estimates" element={<DemoEstimateList />} />
             <Route path="estimates/:id" element={<DemoEstimateEditor />} />
             <Route path="masters" element={<DemoMasters />} />
+            <Route path="masters/customers/:id" element={<DemoCustomerDetail />} />
             <Route path="settings" element={<DemoSettings />} />
           </Route>
           <Route path="*" element={<Navigate to="/demo" replace />} />

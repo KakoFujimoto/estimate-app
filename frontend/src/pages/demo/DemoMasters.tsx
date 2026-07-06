@@ -1,9 +1,9 @@
 import { FormEvent, useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   fetchCompany,
   fetchCustomers,
   fetchItemMasters,
-  replaceCustomers,
   replaceItemMasters,
   updateCompany,
 } from "../../api/masterApi";
@@ -12,7 +12,12 @@ import type { Company, Customer, ItemMaster } from "../../types/master";
 type Tab = "company" | "customer" | "item";
 
 export function DemoMasters() {
-  const [tab, setTab] = useState<Tab>("company");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const initialTab: Tab =
+    tabParam === "customer" || tabParam === "item" ? tabParam : "company";
+
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [company, setCompany] = useState<Company | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [items, setItems] = useState<ItemMaster[]>([]);
@@ -39,6 +44,11 @@ export function DemoMasters() {
     })();
   }, []);
 
+  const switchTab = (next: Tab) => {
+    setTab(next);
+    setSearchParams(next === "company" ? {} : { tab: next });
+  };
+
   const showSaved = () => {
     setMessage("保存しました");
     setTimeout(() => setMessage(""), 2000);
@@ -49,36 +59,6 @@ export function DemoMasters() {
     if (!company) return;
     const saved = await updateCompany(company);
     setCompany(saved);
-    showSaved();
-  };
-
-  const addCustomer = () => {
-    setCustomers((prev) => [
-      ...prev,
-      { id: 0, name: "", address: "", phone: "", email: null, contactPerson: null },
-    ]);
-  };
-
-  const updateCustomer = (index: number, patch: Partial<Customer>) => {
-    setCustomers((prev) =>
-      prev.map((c, i) => (i === index ? { ...c, ...patch } : c)),
-    );
-  };
-
-  const removeCustomer = (index: number) => {
-    setCustomers((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const saveCustomers = async () => {
-    const input = customers.map(({ name, address, phone, email, contactPerson }) => ({
-      name,
-      address,
-      phone,
-      email: email ?? undefined,
-      contactPerson: contactPerson ?? undefined,
-    }));
-    const saved = await replaceCustomers(input);
-    setCustomers(saved);
     showSaved();
   };
 
@@ -139,7 +119,7 @@ export function DemoMasters() {
             key={key}
             type="button"
             className={`tab-btn${tab === key ? " active" : ""}`}
-            onClick={() => setTab(key)}
+            onClick={() => switchTab(key)}
           >
             {label}
           </button>
@@ -197,56 +177,28 @@ export function DemoMasters() {
         <section className="panel">
           <div className="section-head">
             <h2>取引先マスタ</h2>
-            <button type="button" onClick={addCustomer}>
+            <Link to="/demo/masters/customers/new" className="btn-primary">
               ＋ 追加
-            </button>
+            </Link>
           </div>
-          <div className="master-cards">
-            {customers.map((c, index) => (
-              <div key={c.id || `new-${index}`} className="master-card form-grid">
-                <label>
-                  会社名
-                  <input
-                    value={c.name}
-                    onChange={(e) => updateCustomer(index, { name: e.target.value })}
-                  />
-                </label>
-                <label>
-                  住所
-                  <input
-                    value={c.address}
-                    onChange={(e) => updateCustomer(index, { address: e.target.value })}
-                  />
-                </label>
-                <label>
-                  電話
-                  <input
-                    value={c.phone}
-                    onChange={(e) => updateCustomer(index, { phone: e.target.value })}
-                  />
-                </label>
-                <label>
-                  担当者
-                  <input
-                    value={c.contactPerson ?? ""}
-                    onChange={(e) =>
-                      updateCustomer(index, { contactPerson: e.target.value })
-                    }
-                  />
-                </label>
-                <button
-                  type="button"
-                  className="btn-link btn-danger"
-                  onClick={() => removeCustomer(index)}
-                >
-                  削除
-                </button>
-              </div>
-            ))}
-          </div>
-          <button type="button" onClick={() => void saveCustomers()}>
-            一括保存
-          </button>
+
+          {customers.length === 0 ? (
+            <p>
+              取引先がありません。
+              <Link to="/demo/masters/customers/new">新規登録</Link>
+              してください。
+            </p>
+          ) : (
+            <ul className="master-name-list">
+              {customers.map((c) => (
+                <li key={c.id}>
+                  <Link to={`/demo/masters/customers/${c.id}`} className="master-name-link">
+                    {c.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
 

@@ -23,6 +23,27 @@ export async function fetchCustomers(): Promise<Customer[]> {
   return apiFetch<Customer[]>("/masters/customers");
 }
 
+export async function createCustomer(input: CustomerInput): Promise<Customer> {
+  return apiFetch<Customer>("/masters/customers", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateCustomer(
+  id: number,
+  input: CustomerInput,
+): Promise<Customer> {
+  return apiFetch<Customer>(`/masters/customers/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteCustomer(id: number): Promise<void> {
+  await apiFetch<void>(`/masters/customers/${id}`, { method: "DELETE" });
+}
+
 export async function replaceCustomers(
   customers: CustomerInput[],
 ): Promise<Customer[]> {
