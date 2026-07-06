@@ -21,7 +21,6 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
             <Route index element={<DemoDashboard />} />
             <Route path="login" element={<DemoLogin />} />
             <Route path="estimates" element={<DemoEstimateList />} />
-            <Route path="estimates/new" element={<DemoEstimateEditor />} />
             <Route path="estimates/:id" element={<DemoEstimateEditor />} />
             <Route path="masters" element={<DemoMasters />} />
             <Route path="settings" element={<DemoSettings />} />
