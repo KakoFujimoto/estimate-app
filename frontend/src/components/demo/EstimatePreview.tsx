@@ -65,9 +65,9 @@ export function EstimatePreview({ estimate, company, layout }: EstimatePreviewPr
         <thead>
           <tr>
             <th>品目</th>
+            <th className="col-num">単価</th>
             <th className="col-num">数量</th>
             <th>単位</th>
-            <th className="col-num">単価</th>
             <th className="col-num">金額</th>
             <th className="col-num">税率</th>
             {activeLayout === "detailed" && <th>備考</th>}
@@ -84,9 +84,9 @@ export function EstimatePreview({ estimate, company, layout }: EstimatePreviewPr
             estimate.items.map((item) => (
               <tr key={item.id}>
                 <td>{item.name || "—"}</td>
+                <td className="col-num">{formatYen(item.unitPrice)}</td>
                 <td className="col-num">{item.quantity}</td>
                 <td>{item.unit}</td>
-                <td className="col-num">{formatYen(item.unitPrice)}</td>
                 <td className="col-num">{formatYen(item.totalPrice)}</td>
                 <td className="col-num">{formatTaxRateLabel(item.taxRate)}</td>
                 {activeLayout === "detailed" && <td>{item.note ?? ""}</td>}

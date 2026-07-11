@@ -461,6 +461,17 @@ export function DemoEstimateEditor() {
                     />
                     <div className="item-row-grid">
                       <label>
+                        単価
+                        <input
+                          type="number"
+                          min={0}
+                          value={item.unitPrice}
+                          onChange={(e) =>
+                            updateItem(index, { unitPrice: Number(e.target.value) })
+                          }
+                        />
+                      </label>
+                      <label>
                         数量
                         <input
                           type="number"
@@ -477,17 +488,6 @@ export function DemoEstimateEditor() {
                         <input
                           value={item.unit}
                           onChange={(e) => updateItem(index, { unit: e.target.value })}
-                        />
-                      </label>
-                      <label>
-                        単価
-                        <input
-                          type="number"
-                          min={0}
-                          value={item.unitPrice}
-                          onChange={(e) =>
-                            updateItem(index, { unitPrice: Number(e.target.value) })
-                          }
                         />
                       </label>
                       <label>
