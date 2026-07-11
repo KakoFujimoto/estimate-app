@@ -27,6 +27,9 @@ export class EstimateItemEntity {
   @Column({ type: 'text', nullable: true })
   note: string | null;
 
+  @Column({ type: 'real', default: 10 })
+  taxRate: number;
+
   @Column({ type: 'integer', default: 0 })
   sortOrder: number;
 

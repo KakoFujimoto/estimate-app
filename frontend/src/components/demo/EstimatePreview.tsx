@@ -1,6 +1,11 @@
 import type { Company } from "../../types/master";
 import type { Estimate, LayoutType } from "../../types/estimate";
-import { formatDateJa, formatYen } from "../../utils/calculations";
+import {
+  formatDateJa,
+  formatTaxRateLabel,
+  formatYen,
+  getTaxBreakdown,
+} from "../../utils/calculations";
 
 type EstimatePreviewProps = {
   estimate: Estimate;
@@ -19,6 +24,8 @@ export function EstimatePreview({ estimate, company, layout }: EstimatePreviewPr
   const activeLayout = layout ?? estimate.layout;
   const logo = estimate.logoUrl ?? company?.logoUrl;
   const stamp = estimate.stampUrl ?? company?.stampUrl;
+  const taxBreakdown = getTaxBreakdown(estimate.items, estimate.taxRate);
+  const hasMixedRates = taxBreakdown.length > 1;
 
   return (
     <div className={`estimate-preview layout-${activeLayout}`}>
@@ -61,14 +68,15 @@ export function EstimatePreview({ estimate, company, layout }: EstimatePreviewPr
             <th className="col-num">数量</th>
             <th>単位</th>
             <th className="col-num">単価</th>
-            <th className="col-num">金顡</th>
+            <th className="col-num">金額</th>
+            <th className="col-num">税率</th>
             {activeLayout === "detailed" && <th>備考</th>}
           </tr>
         </thead>
         <tbody>
           {estimate.items.length === 0 ? (
             <tr>
-              <td colSpan={activeLayout === "detailed" ? 6 : 5} className="preview-empty">
+              <td colSpan={activeLayout === "detailed" ? 7 : 6} className="preview-empty">
                 明細を追加してください
               </td>
             </tr>
@@ -80,6 +88,7 @@ export function EstimatePreview({ estimate, company, layout }: EstimatePreviewPr
                 <td>{item.unit}</td>
                 <td className="col-num">{formatYen(item.unitPrice)}</td>
                 <td className="col-num">{formatYen(item.totalPrice)}</td>
+                <td className="col-num">{formatTaxRateLabel(item.taxRate)}</td>
                 {activeLayout === "detailed" && <td>{item.note ?? ""}</td>}
               </tr>
             ))
@@ -92,10 +101,25 @@ export function EstimatePreview({ estimate, company, layout }: EstimatePreviewPr
           <span>小計</span>
           <span>{formatYen(estimate.subtotal)}</span>
         </div>
-        <div className="preview-total-row">
-          <span>消費税（{estimate.taxRate}%）</span>
-          <span>{formatYen(estimate.tax)}</span>
-        </div>
+        {hasMixedRates ? (
+          <>
+            {taxBreakdown.map(({ rate, tax }) => (
+              <div key={rate} className="preview-total-row preview-total-sub">
+                <span>消費税（{formatTaxRateLabel(rate)}）</span>
+                <span>{formatYen(tax)}</span>
+              </div>
+            ))}
+            <div className="preview-total-row">
+              <span>消費税合計</span>
+              <span>{formatYen(estimate.tax)}</span>
+            </div>
+          </>
+        ) : (
+          <div className="preview-total-row">
+            <span>消費税（{formatTaxRateLabel(taxBreakdown[0]?.rate ?? estimate.taxRate)}）</span>
+            <span>{formatYen(estimate.tax)}</span>
+          </div>
+        )}
         <div className="preview-total-row preview-total-grand">
           <span>合計（税込）</span>
           <span>{formatYen(estimate.total)}</span>

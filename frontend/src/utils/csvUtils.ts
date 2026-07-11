@@ -1,7 +1,7 @@
 import type { Estimate, EstimateItem } from "../types/estimate";
 import { calcItemTotal } from "./calculations";
 
-const CSV_HEADERS = ["品目", "数量", "単位", "単価", "金額", "備考"] as const;
+const CSV_HEADERS = ["品目", "数量", "単位", "単価", "金額", "税率", "備考"] as const;
 
 export function estimateToCsv(estimate: Estimate): string {
   const rows: string[][] = [
@@ -19,11 +19,12 @@ export function estimateToCsv(estimate: Estimate): string {
       item.unit,
       String(item.unitPrice),
       String(item.totalPrice),
+      String(item.taxRate),
       item.note ?? "",
     ]),
     [],
     ["小計", String(estimate.subtotal)],
-    [`消費税(${estimate.taxRate}%)`, String(estimate.tax)],
+    ["消費税合計", String(estimate.tax)],
     ["合計", String(estimate.total)],
     ["備考", estimate.note ?? ""],
   ];
@@ -79,6 +80,13 @@ export function parseCsvToItems(csvText: string): CsvImportResult {
     const quantity = Number(cells[1]);
     const unit = cells[2]?.trim() || "式";
     const unitPrice = Number(cells[3]?.replace(/[^\d.-]/g, "") ?? cells[3]);
+    const hasTaxColumn = cells.length >= 7;
+    const taxRateRaw = hasTaxColumn ? cells[5] : undefined;
+    const taxRate =
+      taxRateRaw !== undefined && taxRateRaw.trim() !== ""
+        ? Number(taxRateRaw.replace(/[^\d.-]/g, ""))
+        : 10;
+    const noteCell = hasTaxColumn ? cells[6] : cells[5];
 
     if (!name || !Number.isFinite(quantity) || !Number.isFinite(unitPrice)) {
       rowNum += 1;
@@ -91,7 +99,8 @@ export function parseCsvToItems(csvText: string): CsvImportResult {
       unit,
       unitPrice,
       totalPrice: calcItemTotal({ quantity, unitPrice }),
-      note: cells[5]?.trim() || null,
+      taxRate: Number.isFinite(taxRate) ? taxRate : 10,
+      note: noteCell?.trim() || null,
     });
     rowNum += 1;
   }

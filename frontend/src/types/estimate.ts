@@ -7,6 +7,7 @@ export type EstimateItem = {
   unit: string;
   unitPrice: number;
   totalPrice: number;
+  taxRate: number;
   note?: string | null;
 };
 
@@ -37,6 +38,7 @@ export type EstimateItemInput = {
   quantity: number;
   unit: string;
   unitPrice: number;
+  taxRate?: number;
   note?: string;
 };
 

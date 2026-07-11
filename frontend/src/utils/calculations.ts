@@ -6,22 +6,69 @@ export function calcItemTotal(
   return Math.round(item.quantity * item.unitPrice);
 }
 
+export function calcItemTax(
+  item: Pick<EstimateItem | EstimateItemInput, "quantity" | "unitPrice" | "taxRate">,
+  defaultTaxRate = 10,
+): number {
+  const rate = item.taxRate ?? defaultTaxRate;
+  return Math.floor(calcItemTotal(item) * (rate / 100));
+}
+
 export function calcEstimateTotals(
-  items: Pick<EstimateItem | EstimateItemInput, "quantity" | "unitPrice">[],
-  taxRate: number,
+  items: Pick<EstimateItem | EstimateItemInput, "quantity" | "unitPrice" | "taxRate">[],
+  defaultTaxRate = 10,
 ): Pick<Estimate, "subtotal" | "tax" | "total"> {
   const subtotal = items.reduce((sum, item) => sum + calcItemTotal(item), 0);
-  const tax = Math.floor(subtotal * (taxRate / 100));
+  const tax = items.reduce(
+    (sum, item) => sum + calcItemTax(item, defaultTaxRate),
+    0,
+  );
   const total = subtotal + tax;
   return { subtotal, tax, total };
 }
 
-export function recalcEstimate<T extends Estimate>(estimate: T): T {
-  const items = estimate.items.map((item) => ({
+export function getTaxBreakdown(
+  items: Pick<EstimateItem | EstimateItemInput, "quantity" | "unitPrice" | "taxRate">[],
+  defaultTaxRate = 10,
+): { rate: number; subtotal: number; tax: number }[] {
+  const map = new Map<number, { subtotal: number; tax: number }>();
+
+  for (const item of items) {
+    const rate = item.taxRate ?? defaultTaxRate;
+    const amount = calcItemTotal(item);
+    const tax = calcItemTax(item, defaultTaxRate);
+    const current = map.get(rate) ?? { subtotal: 0, tax: 0 };
+    map.set(rate, {
+      subtotal: current.subtotal + amount,
+      tax: current.tax + tax,
+    });
+  }
+
+  return Array.from(map.entries())
+    .sort(([a], [b]) => b - a)
+    .map(([rate, values]) => ({ rate, ...values }));
+}
+
+export function normalizeEstimateItems(
+  items: EstimateItem[],
+  defaultTaxRate: number,
+): EstimateItem[] {
+  return items.map((item) => ({
     ...item,
-    totalPrice: calcItemTotal(item),
+    taxRate: item.taxRate ?? defaultTaxRate,
   }));
-  const totals = calcEstimateTotals(items, estimate.taxRate);
+}
+
+export function recalcEstimate<T extends Estimate>(estimate: T): T {
+  const defaultTaxRate = estimate.taxRate ?? 10;
+  const items = normalizeEstimateItems(
+    estimate.items.map((item) => ({
+      ...item,
+      totalPrice: calcItemTotal(item),
+    })),
+    defaultTaxRate,
+  );
+  const totals = calcEstimateTotals(items, defaultTaxRate);
   return {
     ...estimate,
     items,
@@ -35,6 +82,10 @@ export function formatYen(value: number): string {
     currency: "JPY",
     maximumFractionDigits: 0,
   }).format(value);
+}
+
+export function formatTaxRateLabel(rate: number): string {
+  return rate === 0 ? "非課税" : `${rate}%`;
 }
 
 export function formatDateJa(isoDate: string): string {
@@ -55,14 +106,17 @@ export function toEstimateInput(estimate: Estimate): import("../types/estimate")
     customerName: estimate.customerName,
     customerAddress: estimate.customerAddress ?? undefined,
     customerPhone: estimate.customerPhone ?? undefined,
-    items: estimate.items.map(({ id, name, quantity, unit, unitPrice, note }) => ({
-      ...(id > 0 ? { id } : {}),
-      name,
-      quantity,
-      unit,
-      unitPrice,
-      note: note ?? undefined,
-    })),
+    items: estimate.items.map(
+      ({ id, name, quantity, unit, unitPrice, taxRate, note }) => ({
+        ...(id > 0 ? { id } : {}),
+        name,
+        quantity,
+        unit,
+        unitPrice,
+        taxRate,
+        note: note ?? undefined,
+      }),
+    ),
     taxRate: estimate.taxRate,
     note: estimate.note ?? undefined,
     layout: estimate.layout,

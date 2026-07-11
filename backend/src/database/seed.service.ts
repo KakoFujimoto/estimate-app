@@ -104,6 +104,7 @@ export class SeedService implements OnModuleInit {
         items: estimate1Items.map((item, index) =>
           this.estimateRepo.manager.create(EstimateItemEntity, {
             ...item,
+            taxRate: 10,
             totalPrice: calcItemTotal(item),
             sortOrder: index,
           }),
@@ -132,6 +133,7 @@ export class SeedService implements OnModuleInit {
         items: estimate2Items.map((item, index) =>
           this.estimateRepo.manager.create(EstimateItemEntity, {
             ...item,
+            taxRate: 10,
             totalPrice: calcItemTotal(item),
             sortOrder: index,
           }),

@@ -45,7 +45,7 @@ export class EstimateService {
     const today = new Date().toISOString().slice(0, 10);
 
     const taxRate = dto.taxRate ?? 10;
-    const items = this.buildItems(dto.items);
+    const items = this.buildItems(dto.items, taxRate);
     const totals = calcEstimateTotals(items, taxRate);
 
     const estimate = this.estimateRepo.create({
@@ -77,7 +77,7 @@ export class EstimateService {
   ): Promise<EstimateEntity> {
     const existing = await this.findOne(id, companyId);
     const taxRate = dto.taxRate ?? existing.taxRate;
-    const items = this.buildItems(dto.items);
+    const items = this.buildItems(dto.items, taxRate);
     const totals = calcEstimateTotals(items, taxRate);
 
     existing.title = dto.title;
@@ -132,6 +132,7 @@ export class EstimateService {
           unit: item.unit,
           unitPrice: item.unitPrice,
           totalPrice: item.totalPrice,
+          taxRate: item.taxRate,
           note: item.note,
           sortOrder: index,
         }),
@@ -143,6 +144,7 @@ export class EstimateService {
 
   private buildItems(
     items: CreateEstimateDto['items'],
+    defaultTaxRate: number,
   ): EstimateItemEntity[] {
     return items.map((item, index) =>
       this.estimateRepo.manager.create(EstimateItemEntity, {
@@ -151,6 +153,7 @@ export class EstimateService {
         unit: item.unit,
         unitPrice: item.unitPrice,
         totalPrice: calcItemTotal(item),
+        taxRate: item.taxRate ?? defaultTaxRate,
         note: item.note ?? null,
         sortOrder: index,
       }),

@@ -31,6 +31,11 @@ export class EstimateItemDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  taxRate?: number;
 }
 
 export class CreateEstimateDto {

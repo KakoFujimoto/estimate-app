@@ -11,6 +11,7 @@ import {
   fetchItemMasters,
 } from "../../api/masterApi";
 import { EstimatePreview } from "../../components/demo/EstimatePreview";
+import { EstimateTotalsForm } from "../../components/demo/EstimateTotalsForm";
 import type { Estimate, EstimateItem, LayoutType } from "../../types/estimate";
 import type { Company, Customer, ItemMaster } from "../../types/master";
 import {
@@ -24,7 +25,7 @@ import { estimateTemplates } from "../../utils/templates";
 
 let tempItemId = -1;
 
-function createEmptyItem(): EstimateItem {
+function createEmptyItem(taxRate = 10): EstimateItem {
   tempItemId -= 1;
   return {
     id: tempItemId,
@@ -33,6 +34,7 @@ function createEmptyItem(): EstimateItem {
     unit: "式",
     unitPrice: 0,
     totalPrice: 0,
+    taxRate,
   };
 }
 
@@ -122,19 +124,22 @@ export function DemoEstimateEditor() {
   };
 
   const addItem = (fromMaster?: ItemMaster) => {
-    const newItem = fromMaster
-      ? {
-          ...createEmptyItem(),
-          name: fromMaster.name,
-          quantity: 1,
-          unit: fromMaster.unit,
-          unitPrice: fromMaster.defaultUnitPrice,
-          totalPrice: fromMaster.defaultUnitPrice,
-          note: fromMaster.note,
-        }
-      : createEmptyItem();
+    setEstimate((prev) => {
+      const base = createEmptyItem(prev.taxRate);
+      const newItem = fromMaster
+        ? {
+            ...base,
+            name: fromMaster.name,
+            quantity: 1,
+            unit: fromMaster.unit,
+            unitPrice: fromMaster.defaultUnitPrice,
+            totalPrice: fromMaster.defaultUnitPrice,
+            note: fromMaster.note,
+          }
+        : base;
 
-    setEstimate((prev) => recalcEstimate({ ...prev, items: [...prev.items, newItem] }));
+      return recalcEstimate({ ...prev, items: [...prev.items, newItem] });
+    });
   };
 
   const removeItem = (index: number) => {
@@ -151,7 +156,7 @@ export function DemoEstimateEditor() {
     const tpl = estimateTemplates.find((t) => t.id === templateId);
     if (!tpl) return;
     const items: EstimateItem[] = tpl.items.map((item) => ({
-      ...createEmptyItem(),
+      ...createEmptyItem(estimate.taxRate),
       name: item.name,
       quantity: item.quantity,
       unit: item.unit,
@@ -222,7 +227,7 @@ export function DemoEstimateEditor() {
         return;
       }
       const items: EstimateItem[] = result.items.map((item) => ({
-        ...createEmptyItem(),
+        ...createEmptyItem(estimate.taxRate),
         ...item,
         totalPrice: calcItemTotal(item),
       }));
@@ -386,18 +391,6 @@ export function DemoEstimateEditor() {
               </select>
             </label>
             <label>
-              消費税率（%）
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={estimate.taxRate}
-                onChange={(e) =>
-                  updateEstimateState({ taxRate: Number(e.target.value) || 0 })
-                }
-              />
-            </label>
-            <label>
               備考
               <textarea
                 rows={3}
@@ -497,6 +490,19 @@ export function DemoEstimateEditor() {
                           }
                         />
                       </label>
+                      <label>
+                        税率
+                        <select
+                          value={item.taxRate}
+                          onChange={(e) =>
+                            updateItem(index, { taxRate: Number(e.target.value) })
+                          }
+                        >
+                          <option value={10}>10%</option>
+                          <option value={8}>8%</option>
+                          <option value={0}>非課税</option>
+                        </select>
+                      </label>
                       <span className="item-total">
                         金額: {calcItemTotal(item).toLocaleString("ja-JP")}円
                       </span>
@@ -520,6 +526,11 @@ export function DemoEstimateEditor() {
               ))}
             </div>
           </section>
+
+          <EstimateTotalsForm
+            estimate={previewEstimate}
+            onDefaultTaxRateChange={(taxRate) => updateEstimateState({ taxRate })}
+          />
         </div>
 
         <aside className="editor-preview-panel">

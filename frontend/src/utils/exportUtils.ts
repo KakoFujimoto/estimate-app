@@ -1,6 +1,6 @@
 import type { Company } from "../types/master";
 import type { Estimate } from "../types/estimate";
-import { formatDateJa, formatYen } from "../utils/calculations";
+import { formatDateJa, formatTaxRateLabel, formatYen, getTaxBreakdown } from "../utils/calculations";
 
 export interface PrintOptions {
   title: string;
@@ -55,6 +55,9 @@ export function buildEstimatePrintHtml(
   const logo = estimate.logoUrl ?? company?.logoUrl;
   const stamp = estimate.stampUrl ?? company?.stampUrl;
 
+  const taxBreakdown = getTaxBreakdown(estimate.items, estimate.taxRate);
+  const hasMixedRates = taxBreakdown.length > 1;
+
   const itemRows = estimate.items
     .map(
       (item) => `
@@ -64,10 +67,21 @@ export function buildEstimatePrintHtml(
         <td>${escapeHtml(item.unit)}</td>
         <td class="num">${formatYen(item.unitPrice)}</td>
         <td class="num">${formatYen(item.totalPrice)}</td>
+        <td class="num">${escapeHtml(formatTaxRateLabel(item.taxRate))}</td>
         <td>${escapeHtml(item.note ?? "")}</td>
       </tr>`,
     )
     .join("");
+
+  const taxRows = hasMixedRates
+    ? taxBreakdown
+        .map(
+          ({ rate, tax }) =>
+            `<tr><td>消費税（${escapeHtml(formatTaxRateLabel(rate))}）</td><td class="num">${formatYen(tax)}</td></tr>`,
+        )
+        .join("") +
+      `<tr><td>消費税合計</td><td class="num">${formatYen(estimate.tax)}</td></tr>`
+    : `<tr><td>消費税（${escapeHtml(formatTaxRateLabel(taxBreakdown[0]?.rate ?? estimate.taxRate))}）</td><td class="num">${formatYen(estimate.tax)}</td></tr>`;
 
   return `
     <div class="header-row">
@@ -87,13 +101,13 @@ export function buildEstimatePrintHtml(
     ${estimate.customerAddress ? `<p>${escapeHtml(estimate.customerAddress)}</p>` : ""}
     <table>
       <thead>
-        <tr><th>品目</th><th>数量</th><th>単位</th><th>単価</th><th>金額</th><th>備考</th></tr>
+        <tr><th>品目</th><th>数量</th><th>単位</th><th>単価</th><th>金額</th><th>税率</th><th>備考</th></tr>
       </thead>
       <tbody>${itemRows}</tbody>
     </table>
     <table class="totals">
       <tr><td>小計</td><td class="num">${formatYen(estimate.subtotal)}</td></tr>
-      <tr><td>消費税（${estimate.taxRate}%）</td><td class="num">${formatYen(estimate.tax)}</td></tr>
+      ${taxRows}
       <tr><td><strong>合計</strong></td><td class="num"><strong>${formatYen(estimate.total)}</strong></td></tr>
     </table>
     ${estimate.note ? `<p style="margin-top:24px">備考: ${escapeHtml(estimate.note)}</p>` : ""}
