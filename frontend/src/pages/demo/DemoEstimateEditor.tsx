@@ -15,7 +15,9 @@ import { EstimateTotalsForm } from "../../components/demo/EstimateTotalsForm";
 import type { Estimate, EstimateItem, LayoutType } from "../../types/estimate";
 import type { Company, Customer, ItemMaster } from "../../types/master";
 import {
+  calcItemTax,
   calcItemTotal,
+  formatYen,
   recalcEstimate,
   toEstimateInput,
 } from "../../utils/calculations";
@@ -504,7 +506,10 @@ export function DemoEstimateEditor() {
                         </select>
                       </label>
                       <span className="item-total">
-                        金額: {calcItemTotal(item).toLocaleString("ja-JP")}円
+                        金額: {formatYen(calcItemTotal(item))}
+                      </span>
+                      <span className="item-tax">
+                        税額: {formatYen(calcItemTax(item, estimate.taxRate))}
                       </span>
                     </div>
                     <input

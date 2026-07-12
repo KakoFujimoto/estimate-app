@@ -649,17 +649,22 @@ a {
 
 .item-row-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto auto;
   gap: 8px;
   align-items: end;
 }
 
-.item-total {
+.item-total,
+.item-tax {
   font-size: 13px;
   font-weight: 600;
   color: #1e3a5f;
   white-space: nowrap;
   padding-bottom: 8px;
+}
+
+.item-tax {
+  color: #475569;
 }
 
 .editor-item-actions {

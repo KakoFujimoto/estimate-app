@@ -4,6 +4,7 @@ import {
   formatDateJa,
   formatTaxRateLabel,
   formatYen,
+  calcItemTax,
   getTaxBreakdown,
 } from "../../utils/calculations";
 
@@ -70,13 +71,14 @@ export function EstimatePreview({ estimate, company, layout }: EstimatePreviewPr
             <th>単位</th>
             <th className="col-num">金額</th>
             <th className="col-num">税率</th>
+            <th className="col-num">税額</th>
             {activeLayout === "detailed" && <th>備考</th>}
           </tr>
         </thead>
         <tbody>
           {estimate.items.length === 0 ? (
             <tr>
-              <td colSpan={activeLayout === "detailed" ? 7 : 6} className="preview-empty">
+              <td colSpan={activeLayout === "detailed" ? 8 : 7} className="preview-empty">
                 明細を追加してください
               </td>
             </tr>
@@ -89,6 +91,7 @@ export function EstimatePreview({ estimate, company, layout }: EstimatePreviewPr
                 <td>{item.unit}</td>
                 <td className="col-num">{formatYen(item.totalPrice)}</td>
                 <td className="col-num">{formatTaxRateLabel(item.taxRate)}</td>
+                <td className="col-num">{formatYen(calcItemTax(item, estimate.taxRate))}</td>
                 {activeLayout === "detailed" && <td>{item.note ?? ""}</td>}
               </tr>
             ))
