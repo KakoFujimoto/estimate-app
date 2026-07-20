@@ -48,6 +48,11 @@ export function EstimatePreview({ estimate, company, layout }: EstimatePreviewPr
               <p className="preview-company-name">{company.name}</p>
               <p className="preview-meta">{company.address}</p>
               <p className="preview-meta">TEL {company.phone}</p>
+              {company.invoiceRegistrationNumber && (
+                <p className="preview-meta">
+                  適格事業者No {company.invoiceRegistrationNumber}
+                </p>
+              )}
             </>
           )}
           {stamp && <img src={stamp} alt="印影" className="preview-stamp" />}

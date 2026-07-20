@@ -94,7 +94,7 @@ export function buildEstimatePrintHtml(
         <p>見積日: ${formatDateJa(estimate.date)}</p>
       </div>
       <div style="text-align:right">
-        ${company ? `<p><strong>${escapeHtml(company.name)}</strong></p><p>${escapeHtml(company.address)}</p><p>TEL ${escapeHtml(company.phone)}</p>` : ""}
+        ${company ? `<p><strong>${escapeHtml(company.name)}</strong></p><p>${escapeHtml(company.address)}</p><p>TEL ${escapeHtml(company.phone)}</p>${company.invoiceRegistrationNumber ? `<p>適格事業者No ${escapeHtml(company.invoiceRegistrationNumber)}</p>` : ""}` : ""}
         ${stamp ? `<img class="stamp" src="${stamp}" alt="印影" style="margin-top:8px" />` : ""}
       </div>
     </div>

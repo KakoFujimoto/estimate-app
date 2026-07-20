@@ -40,6 +40,9 @@ export class CompanyEntity {
   representative: string;
 
   @Column({ type: 'text', nullable: true })
+  invoiceRegistrationNumber: string | null;
+
+  @Column({ type: 'text', nullable: true })
   logoUrl: string | null;
 
   @Column({ type: 'text', nullable: true })

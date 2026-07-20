@@ -47,6 +47,7 @@ export class SeedService implements OnModuleInit {
         phone: '03-1234-5678',
         email: 'info@sample-construction.jp',
         representative: '代表取締役 サンプル太郎',
+        invoiceRegistrationNumber: 'T1234567890123',
       }),
     );
 

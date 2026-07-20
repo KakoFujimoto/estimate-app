@@ -41,6 +41,10 @@ export class UpdateCompanyDto extends AddressFieldsDto {
 
   @IsOptional()
   @IsString()
+  invoiceRegistrationNumber?: string | null;
+
+  @IsOptional()
+  @IsString()
   logoUrl?: string | null;
 
   @IsOptional()

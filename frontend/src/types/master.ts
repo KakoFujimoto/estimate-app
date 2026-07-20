@@ -18,6 +18,7 @@ export type Company = {
   phone: string;
   email: string;
   representative: string;
+  invoiceRegistrationNumber?: string | null;
   logoUrl?: string | null;
   stampUrl?: string | null;
 };

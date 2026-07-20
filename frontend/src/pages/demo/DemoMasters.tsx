@@ -186,6 +186,19 @@ export function DemoMasters() {
                 }
               />
             </label>
+            <label>
+              適格事業者No（任意）
+              <input
+                value={company.invoiceRegistrationNumber ?? ""}
+                onChange={(e) =>
+                  setCompany({
+                    ...company,
+                    invoiceRegistrationNumber: e.target.value || null,
+                  })
+                }
+                placeholder="例: T1234567890123"
+              />
+            </label>
             <button type="submit">保存</button>
           </form>
         </section>
