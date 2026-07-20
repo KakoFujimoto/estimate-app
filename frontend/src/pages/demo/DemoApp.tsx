@@ -3,7 +3,7 @@ import { useAuth } from "../../contexts/AuthContext";
 
 const navItems = [
   { to: "/demo", label: "ホーム", end: true },
-  { to: "/demo/estimates", label: "見積一覧" },
+  { to: "/demo/estimates", label: "見積一覧", end: true },
   { to: "/demo/estimates/new", label: "見積作成" },
   { to: "/demo/masters", label: "マスタ管理" },
   { to: "/demo/settings", label: "設定" },
