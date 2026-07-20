@@ -38,6 +38,11 @@ export class SeedService implements OnModuleInit {
     const company = await this.companyRepo.save(
       this.companyRepo.create({
         name: 'サンプル建設株式会社',
+        postalCode: '1000001',
+        prefecture: '東京都',
+        city: '千代田区',
+        town: 'サンプル町',
+        streetAddress: '1-2-3',
         address: '〒100-0001 東京都千代田区サンプル町1-2-3',
         phone: '03-1234-5678',
         email: 'info@sample-construction.jp',
@@ -58,6 +63,11 @@ export class SeedService implements OnModuleInit {
       this.customerRepo.create({
         companyId: company.id,
         name: 'サンプル商事株式会社',
+        postalCode: '1000002',
+        prefecture: '東京都',
+        city: '千代田区',
+        town: 'サンプル町',
+        streetAddress: '2-3-4',
         address: '〒100-0002 東京都千代田区サンプル町2-3-4',
         phone: '03-2345-6789',
         email: 'purchase@sample-shoji.jp',
@@ -66,6 +76,11 @@ export class SeedService implements OnModuleInit {
       this.customerRepo.create({
         companyId: company.id,
         name: '株式会社サンプル工務店',
+        postalCode: '1000003',
+        prefecture: '東京都',
+        city: '千代田区',
+        town: 'サンプル町',
+        streetAddress: '3-4-5',
         address: '〒100-0003 東京都千代田区サンプル町3-4-5',
         phone: '03-3456-7890',
         email: 'info@sample-koumuten.jp',

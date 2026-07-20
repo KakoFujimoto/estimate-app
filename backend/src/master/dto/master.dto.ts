@@ -1,11 +1,34 @@
 import { IsEmail, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
-export class UpdateCompanyDto {
+export class AddressFieldsDto {
+  @IsOptional()
+  @IsString()
+  postalCode?: string;
+
+  @IsOptional()
+  @IsString()
+  prefecture?: string;
+
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  town?: string;
+
+  @IsOptional()
+  @IsString()
+  streetAddress?: string;
+}
+
+export class UpdateCompanyDto extends AddressFieldsDto {
   @IsString()
   name: string;
 
+  @IsOptional()
   @IsString()
-  address: string;
+  address?: string;
 
   @IsString()
   phone: string;
@@ -25,12 +48,13 @@ export class UpdateCompanyDto {
   stampUrl?: string | null;
 }
 
-export class CreateCustomerDto {
+export class CreateCustomerDto extends AddressFieldsDto {
   @IsString()
   name: string;
 
+  @IsOptional()
   @IsString()
-  address: string;
+  address?: string;
 
   @IsString()
   phone: string;

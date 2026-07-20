@@ -858,3 +858,132 @@ a {
     position: static;
   }
 }
+
+.address-form-fields {
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.address-form-fields legend {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.postal-input-row,
+.postal-search-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.postal-input-row input,
+.postal-search-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.address-split-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.address-street-field {
+  grid-column: 1 / -1;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal-panel {
+  background: #fff;
+  border-radius: 8px;
+  width: min(560px, 100%);
+  max-height: min(80vh, 640px);
+  overflow: auto;
+  padding: 20px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.2);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.modal-close {
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  color: #64748b;
+}
+
+.postal-search-form {
+  margin-bottom: 12px;
+}
+
+.postal-search-loading {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.postal-search-hint {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0 0 8px;
+}
+
+.postal-search-results ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.postal-search-results button {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #f8fafc;
+  cursor: pointer;
+}
+
+.postal-search-results button:hover {
+  border-color: #94a3b8;
+  background: #f1f5f9;
+}
+
+.postal-search-label {
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.postal-search-zip-hint {
+  color: #64748b;
+  font-weight: 400;
+}

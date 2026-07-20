@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchCompany, updateCompany } from "../../api/masterApi";
 import type { Company } from "../../types/master";
+import { addressFieldsFromRecord, withFormattedAddress } from "../../utils/addressUtils";
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -20,7 +21,11 @@ export function DemoSettings() {
   useEffect(() => {
     void (async () => {
       try {
-        setCompany(await fetchCompany());
+        const loaded = await fetchCompany();
+        setCompany({
+          ...loaded,
+          ...addressFieldsFromRecord(loaded),
+        });
       } catch {
         setError("会社情報の取得に失敗しました");
       } finally {
@@ -31,8 +36,12 @@ export function DemoSettings() {
 
   const saveImages = async (patch: Partial<Company>) => {
     if (!company) return;
-    const saved = await updateCompany({ ...company, ...patch });
-    setCompany(saved);
+    const { id: _id, ...rest } = company;
+    const saved = await updateCompany(withFormattedAddress({ ...rest, ...patch }));
+    setCompany({
+      ...saved,
+      ...addressFieldsFromRecord(saved),
+    });
     setMessage("保存しました");
     setTimeout(() => setMessage(""), 2000);
   };

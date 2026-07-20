@@ -1,7 +1,20 @@
+export type AddressFields = {
+  postalCode: string;
+  prefecture: string;
+  city: string;
+  town: string;
+  streetAddress: string;
+};
+
 export type Company = {
   id: number;
   name: string;
   address: string;
+  postalCode: string;
+  prefecture: string;
+  city: string;
+  town: string;
+  streetAddress: string;
   phone: string;
   email: string;
   representative: string;
@@ -13,6 +26,11 @@ export type Customer = {
   id: number;
   name: string;
   address: string;
+  postalCode: string;
+  prefecture: string;
+  city: string;
+  town: string;
+  streetAddress: string;
   phone: string;
   email?: string | null;
   contactPerson?: string | null;

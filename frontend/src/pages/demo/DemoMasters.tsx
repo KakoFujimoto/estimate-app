@@ -8,6 +8,12 @@ import {
   updateCompany,
 } from "../../api/masterApi";
 import type { Company, Customer, ItemMaster } from "../../types/master";
+import { AddressFormFields } from "../../components/demo/AddressFormFields";
+import {
+  addressFieldsFromRecord,
+  formatFullAddress,
+  withFormattedAddress,
+} from "../../utils/addressUtils";
 
 type Tab = "company" | "customer" | "item";
 
@@ -33,7 +39,10 @@ export function DemoMasters() {
           fetchCustomers(),
           fetchItemMasters(),
         ]);
-        setCompany(c);
+        setCompany({
+          ...c,
+          ...addressFieldsFromRecord(c),
+        });
         setCustomers(cust);
         setItems(itemList);
       } catch {
@@ -57,8 +66,17 @@ export function DemoMasters() {
   const saveCompany = async (e: FormEvent) => {
     e.preventDefault();
     if (!company) return;
-    const saved = await updateCompany(company);
-    setCompany(saved);
+    if (!formatFullAddress(company)) {
+      setError("住所を入力してください");
+      return;
+    }
+    setError("");
+    const { id: _id, ...rest } = company;
+    const saved = await updateCompany(withFormattedAddress(rest));
+    setCompany({
+      ...saved,
+      ...addressFieldsFromRecord(saved),
+    });
     showSaved();
   };
 
@@ -137,13 +155,13 @@ export function DemoMasters() {
                 onChange={(e) => setCompany({ ...company, name: e.target.value })}
               />
             </label>
-            <label>
-              住所
-              <input
-                value={company.address}
-                onChange={(e) => setCompany({ ...company, address: e.target.value })}
-              />
-            </label>
+
+            <AddressFormFields
+              value={company}
+              onChange={(address) => setCompany({ ...company, ...address })}
+              required
+            />
+
             <label>
               電話
               <input

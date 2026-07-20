@@ -1,16 +1,24 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { AddressFormFields } from "../../components/demo/AddressFormFields";
 import {
   createCustomer,
   deleteCustomer,
   fetchCustomers,
   updateCustomer,
 } from "../../api/masterApi";
-import type { Customer, CustomerInput } from "../../types/master";
+import type { CustomerInput } from "../../types/master";
+import {
+  addressFieldsFromRecord,
+  emptyAddressFields,
+  formatFullAddress,
+  withFormattedAddress,
+} from "../../utils/addressUtils";
 
 const emptyCustomer = (): CustomerInput => ({
   name: "",
   address: "",
+  ...emptyAddressFields(),
   phone: "",
   email: undefined,
   contactPerson: undefined,
@@ -41,10 +49,11 @@ export function DemoCustomerDetail() {
         }
         setForm({
           name: customer.name,
-          address: customer.address,
           phone: customer.phone,
           email: customer.email ?? undefined,
           contactPerson: customer.contactPerson ?? undefined,
+          address: customer.address,
+          ...addressFieldsFromRecord(customer),
         });
       } catch {
         setError("取引先の取得に失敗しました");
@@ -60,14 +69,20 @@ export function DemoCustomerDetail() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!formatFullAddress(form)) {
+      setError("住所を入力してください");
+      return;
+    }
+
     setSaving(true);
     setError("");
     try {
+      const payload = withFormattedAddress(form);
       if (isNew) {
-        const saved = await createCustomer(form);
+        const saved = await createCustomer(payload);
         navigate(`/demo/masters/customers/${saved.id}`, { replace: true });
       } else {
-        await updateCustomer(Number(id), form);
+        await updateCustomer(Number(id), payload);
       }
       setMessage("保存しました");
       setTimeout(() => setMessage(""), 2000);
@@ -121,14 +136,13 @@ export function DemoCustomerDetail() {
               required
             />
           </label>
-          <label>
-            住所
-            <input
-              value={form.address}
-              onChange={(e) => updateField({ address: e.target.value })}
-              required
-            />
-          </label>
+
+          <AddressFormFields
+            value={form}
+            onChange={(address) => updateField(address)}
+            required
+          />
+
           <label>
             電話
             <input
@@ -138,7 +152,7 @@ export function DemoCustomerDetail() {
             />
           </label>
           <label>
-            メール
+            メール（任意）
             <input
               type="email"
               value={form.email ?? ""}
@@ -146,7 +160,7 @@ export function DemoCustomerDetail() {
             />
           </label>
           <label>
-            担当者
+            担当者（任意）
             <input
               value={form.contactPerson ?? ""}
               onChange={(e) =>
@@ -160,7 +174,11 @@ export function DemoCustomerDetail() {
               {saving ? "保存中..." : "保存"}
             </button>
             {!isNew && (
-              <button type="button" className="btn-secondary btn-danger-text" onClick={() => void handleDelete()}>
+              <button
+                type="button"
+                className="btn-secondary btn-danger-text"
+                onClick={() => void handleDelete()}
+              >
                 削除
               </button>
             )}

@@ -1,9 +1,14 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import {
+  applyFormattedAddress,
+  normalizePostalCode,
+} from '../common/utils/address.util';
 import { CompanyEntity } from '../entities/company.entity';
 import { CustomerEntity } from '../entities/customer.entity';
 import { ItemMasterEntity } from '../entities/item-master.entity';
@@ -14,6 +19,7 @@ import {
   UpdateCustomerDto,
   UpdateItemMasterDto,
 } from './dto/master.dto';
+import type { PostalCodeSearchResult } from './dto/postal-code.dto';
 
 @Injectable()
 export class MasterService {
@@ -40,6 +46,7 @@ export class MasterService {
   ): Promise<CompanyEntity> {
     const company = await this.getCompany(companyId);
     Object.assign(company, dto);
+    applyFormattedAddress(company);
     return this.companyRepo.save(company);
   }
 
@@ -52,6 +59,7 @@ export class MasterService {
     dto: CreateCustomerDto,
   ): Promise<CustomerEntity> {
     const customer = this.customerRepo.create({ ...dto, companyId });
+    applyFormattedAddress(customer);
     return this.customerRepo.save(customer);
   }
 
@@ -63,6 +71,7 @@ export class MasterService {
     const customer = await this.customerRepo.findOne({ where: { id, companyId } });
     if (!customer) throw new NotFoundException('Customer not found');
     Object.assign(customer, dto);
+    applyFormattedAddress(customer);
     return this.customerRepo.save(customer);
   }
 
@@ -78,9 +87,11 @@ export class MasterService {
   ): Promise<CustomerEntity[]> {
     return this.customerRepo.manager.transaction(async (manager) => {
       await manager.delete(CustomerEntity, { companyId });
-      const entities = customers.map((c) =>
-        manager.create(CustomerEntity, { ...c, companyId }),
-      );
+      const entities = customers.map((c) => {
+        const entity = manager.create(CustomerEntity, { ...c, companyId });
+        applyFormattedAddress(entity);
+        return entity;
+      });
       return manager.save(entities);
     });
   }
@@ -125,5 +136,42 @@ export class MasterService {
       );
       return manager.save(entities);
     });
+  }
+
+  async searchPostalCode(zipcode: string): Promise<PostalCodeSearchResult[]> {
+    const digits = normalizePostalCode(zipcode);
+    if (digits.length !== 7) {
+      throw new BadRequestException('郵便番号は7桁で入力してください');
+    }
+
+    const url = `https://zipcloud.ibsnet.co.jp/api/search?zipcode=${digits}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new BadRequestException('郵便番号の検索に失敗しました');
+    }
+
+    const data = (await response.json()) as {
+      status: number;
+      message: string | null;
+      results: Array<{
+        zipcode: string;
+        address1: string;
+        address2: string;
+        address3: string;
+      }> | null;
+    };
+
+    if (data.status !== 200 || !data.results?.length) {
+      throw new BadRequestException(
+        data.message ?? '該当する郵便番号が見つかりませんでした',
+      );
+    }
+
+    return data.results.map((row) => ({
+      postalCode: row.zipcode,
+      prefecture: row.address1,
+      city: row.address2,
+      town: row.address3,
+    }));
   }
 }

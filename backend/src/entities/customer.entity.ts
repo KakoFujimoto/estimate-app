@@ -12,6 +12,21 @@ export class CustomerEntity {
   @Column()
   name: string;
 
+  @Column({ default: '' })
+  postalCode: string;
+
+  @Column({ default: '' })
+  prefecture: string;
+
+  @Column({ default: '' })
+  city: string;
+
+  @Column({ default: '' })
+  town: string;
+
+  @Column({ default: '' })
+  streetAddress: string;
+
   @Column()
   address: string;
 

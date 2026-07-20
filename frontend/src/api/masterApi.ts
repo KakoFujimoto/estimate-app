@@ -6,6 +6,7 @@ import type {
   ItemMaster,
   ItemMasterInput,
 } from "../types/master";
+import type { PostalCodeSearchResult } from "../utils/addressUtils";
 import { apiFetch } from "./client";
 
 export async function fetchCompany(): Promise<Company> {
@@ -51,6 +52,15 @@ export async function replaceCustomers(
     method: "PUT",
     body: JSON.stringify(customers),
   });
+}
+
+export async function searchPostalCode(
+  zipcode: string,
+): Promise<PostalCodeSearchResult[]> {
+  const query = new URLSearchParams({ zipcode });
+  return apiFetch<PostalCodeSearchResult[]>(
+    `/masters/postal-code/search?${query.toString()}`,
+  );
 }
 
 export async function fetchItemMasters(): Promise<ItemMaster[]> {

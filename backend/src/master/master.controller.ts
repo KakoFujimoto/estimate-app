@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Post,
   Put,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -37,6 +38,11 @@ export class MasterController {
   @Put('company')
   updateCompany(@Body() dto: UpdateCompanyDto, @Req() req: AuthRequest) {
     return this.masterService.updateCompany(req.user.companyId, dto);
+  }
+
+  @Get('postal-code/search')
+  searchPostalCode(@Query('zipcode') zipcode: string) {
+    return this.masterService.searchPostalCode(zipcode);
   }
 
   @Get('customers')
