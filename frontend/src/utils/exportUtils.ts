@@ -26,9 +26,9 @@ export function printDocument(options: PrintOptions): void {
       <style>
         body { font-family: "Hiragino Sans", "Yu Gothic", Meiryo, sans-serif; margin: 24px; line-height: 1.6; color: #1f2937; }
         h1 { font-size: 22px; margin: 0 0 8px; }
-        table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
-        th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; }
-        th { background: #f1f5f9; }
+        table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 12px; }
+        th, td { border: 1px solid #cbd5e1; padding: 4px 6px; text-align: left; line-height: 1.3; }
+        th { background: #f1f5f9; font-size: 11px; }
         .num { text-align: right; }
         .totals { margin-top: 16px; width: 280px; margin-left: auto; }
         .totals td { border: none; padding: 4px 8px; }
