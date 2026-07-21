@@ -71,6 +71,7 @@ export function EstimatePreview({ estimate, company, layout }: EstimatePreviewPr
         <thead>
           <tr>
             <th>品目</th>
+            <th>業者</th>
             <th className="col-num">単価</th>
             <th className="col-num">数量</th>
             <th>単位</th>
@@ -83,7 +84,7 @@ export function EstimatePreview({ estimate, company, layout }: EstimatePreviewPr
         <tbody>
           {estimate.items.length === 0 ? (
             <tr>
-              <td colSpan={activeLayout === "detailed" ? 8 : 7} className="preview-empty">
+              <td colSpan={activeLayout === "detailed" ? 9 : 8} className="preview-empty">
                 明細を追加してください
               </td>
             </tr>
@@ -91,6 +92,7 @@ export function EstimatePreview({ estimate, company, layout }: EstimatePreviewPr
             estimate.items.map((item) => (
               <tr key={item.id}>
                 <td>{item.name || "—"}</td>
+                <td>{item.vendorName || "—"}</td>
                 <td className="col-num">{formatYen(item.unitPrice)}</td>
                 <td className="col-num">{item.quantity}</td>
                 <td>{item.unit}</td>

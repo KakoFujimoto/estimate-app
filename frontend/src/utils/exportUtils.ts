@@ -63,6 +63,7 @@ export function buildEstimatePrintHtml(
       (item) => `
       <tr>
         <td>${escapeHtml(item.name)}</td>
+        <td>${escapeHtml(item.vendorName ?? "")}</td>
         <td class="num">${formatYen(item.unitPrice)}</td>
         <td class="num">${item.quantity}</td>
         <td>${escapeHtml(item.unit)}</td>
@@ -102,7 +103,7 @@ export function buildEstimatePrintHtml(
     ${estimate.customerAddress ? `<p>${escapeHtml(estimate.customerAddress)}</p>` : ""}
     <table>
       <thead>
-        <tr><th>品目</th><th>単価</th><th>数量</th><th>単位</th><th>金額</th><th>税率</th><th>税額</th><th>備考</th></tr>
+        <tr><th>品目</th><th>業者</th><th>単価</th><th>数量</th><th>単位</th><th>金額</th><th>税率</th><th>税額</th><th>備考</th></tr>
       </thead>
       <tbody>${itemRows}</tbody>
     </table>

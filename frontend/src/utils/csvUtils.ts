@@ -1,7 +1,7 @@
 import type { Estimate, EstimateItem } from "../types/estimate";
 import { calcItemTax, calcItemTotal } from "./calculations";
 
-const CSV_HEADERS = ["品目", "数量", "単位", "単価", "金額", "税率", "税額", "備考"] as const;
+const CSV_HEADERS = ["品目", "業者", "数量", "単位", "単価", "金額", "税率", "税額", "備考"] as const;
 
 export function estimateToCsv(estimate: Estimate): string {
   const rows: string[][] = [
@@ -15,6 +15,7 @@ export function estimateToCsv(estimate: Estimate): string {
     [...CSV_HEADERS],
     ...estimate.items.map((item) => [
       item.name,
+      item.vendorName ?? "",
       String(item.quantity),
       item.unit,
       String(item.unitPrice),
@@ -68,6 +69,9 @@ export function parseCsvToItems(csvText: string): CsvImportResult {
     ? lines.slice(lines.indexOf(headerLine) + 1)
     : lines;
 
+  const headerCells = headerLine ? parseCsvLine(headerLine) : [];
+  const hasVendorColumn = headerCells.some((h) => h.includes("業者"));
+
   const items: Omit<EstimateItem, "id">[] = [];
   let rowNum = 0;
 
@@ -78,21 +82,25 @@ export function parseCsvToItems(csvText: string): CsvImportResult {
     const name = cells[0]?.trim();
     if (!name || name === "小計" || name === "合計" || name.startsWith("消費税")) continue;
 
-    const quantity = Number(cells[1]);
-    const unit = cells[2]?.trim() || "式";
-    const unitPrice = Number(cells[3]?.replace(/[^\d.-]/g, "") ?? cells[3]);
-    const hasTaxColumn = cells.length >= 7;
-    const hasTaxAmountColumn = cells.length >= 8;
-    const taxRateRaw = hasTaxColumn ? cells[5] : undefined;
+    const offset = hasVendorColumn ? 1 : 0;
+    const vendorName = hasVendorColumn ? cells[1]?.trim() || null : null;
+    const quantity = Number(cells[1 + offset]);
+    const unit = cells[2 + offset]?.trim() || "式";
+    const unitPrice = Number(
+      cells[3 + offset]?.replace(/[^\d.-]/g, "") ?? cells[3 + offset],
+    );
+    const hasTaxColumn = cells.length >= 7 + offset;
+    const hasTaxAmountColumn = cells.length >= 8 + offset;
+    const taxRateRaw = hasTaxColumn ? cells[5 + offset] : undefined;
     const taxRate =
       taxRateRaw !== undefined && taxRateRaw.trim() !== ""
         ? Number(taxRateRaw.replace(/[^\d.-]/g, ""))
         : 10;
     const noteCell = hasTaxAmountColumn
-      ? cells[7]
+      ? cells[7 + offset]
       : hasTaxColumn
-        ? cells[6]
-        : cells[5];
+        ? cells[6 + offset]
+        : cells[5 + offset];
 
     if (!name || !Number.isFinite(quantity) || !Number.isFinite(unitPrice)) {
       rowNum += 1;
@@ -106,6 +114,8 @@ export function parseCsvToItems(csvText: string): CsvImportResult {
       unitPrice,
       totalPrice: calcItemTotal({ quantity, unitPrice }),
       taxRate: Number.isFinite(taxRate) ? taxRate : 10,
+      vendorId: null,
+      vendorName,
       note: noteCell?.trim() || null,
     });
     rowNum += 1;

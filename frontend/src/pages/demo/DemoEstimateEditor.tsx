@@ -37,6 +37,8 @@ function createEmptyItem(taxRate = 10): EstimateItem {
     unitPrice: 0,
     totalPrice: 0,
     taxRate,
+    vendorId: null,
+    vendorName: null,
   };
 }
 
@@ -228,17 +230,37 @@ export function DemoEstimateEditor() {
         alert(result.error);
         return;
       }
-      const items: EstimateItem[] = result.items.map((item) => ({
-        ...createEmptyItem(estimate.taxRate),
-        ...item,
-        totalPrice: calcItemTotal(item),
-      }));
+      const items: EstimateItem[] = result.items.map((item) => {
+        const vendor = item.vendorName
+          ? customers.find((c) => c.name === item.vendorName)
+          : undefined;
+        return {
+          ...createEmptyItem(estimate.taxRate),
+          ...item,
+          vendorId: vendor?.id ?? null,
+          vendorName: vendor?.name ?? item.vendorName ?? null,
+          totalPrice: calcItemTotal(item),
+        };
+      });
       updateEstimateState({ items });
     };
     reader.readAsText(file);
   };
 
   const previewEstimate = useMemo(() => recalcEstimate(estimate), [estimate]);
+
+  const vendorSuggestions = useMemo(() => {
+    const names = new Set<string>();
+    for (const c of customers) {
+      const name = c.name.trim();
+      if (name) names.add(name);
+    }
+    for (const item of estimate.items) {
+      const name = item.vendorName?.trim();
+      if (name) names.add(name);
+    }
+    return Array.from(names).sort((a, b) => a.localeCompare(b, "ja"));
+  }, [customers, estimate.items]);
 
   if (loading) return <p>読み込み中...</p>;
 
@@ -456,11 +478,33 @@ export function DemoEstimateEditor() {
                     ⋮⋮
                   </span>
                   <div className="item-fields">
-                    <input
-                      placeholder="品目名（自由入力可）"
-                      value={item.name}
-                      onChange={(e) => updateItem(index, { name: e.target.value })}
-                    />
+                    <div className="item-name-vendor-row">
+                      <input
+                        placeholder="品目名（自由入力可）"
+                        value={item.name}
+                        onChange={(e) => updateItem(index, { name: e.target.value })}
+                      />
+                      <label className="item-vendor-select">
+                        業者
+                        <input
+                          list="vendor-suggestions"
+                          value={item.vendorName ?? ""}
+                          onChange={(e) => {
+                            const vendorName = e.target.value;
+                            const trimmed = vendorName.trim();
+                            const matched = customers.find(
+                              (c) => c.name === trimmed,
+                            );
+                            updateItem(index, {
+                              vendorName: vendorName || null,
+                              vendorId: matched?.id ?? null,
+                            });
+                          }}
+                          placeholder="入力または選択"
+                          autoComplete="off"
+                        />
+                      </label>
+                    </div>
                     <div className="item-row-grid">
                       <label>
                         単価
@@ -530,6 +574,11 @@ export function DemoEstimateEditor() {
                 </div>
               ))}
             </div>
+            <datalist id="vendor-suggestions">
+              {vendorSuggestions.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
           </section>
 
           <EstimateTotalsForm

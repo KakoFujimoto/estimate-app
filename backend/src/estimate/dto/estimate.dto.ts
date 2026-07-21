@@ -36,6 +36,14 @@ export class EstimateItemDto {
   @IsNumber()
   @Min(0)
   taxRate?: number;
+
+  @IsOptional()
+  @IsNumber()
+  vendorId?: number | null;
+
+  @IsOptional()
+  @IsString()
+  vendorName?: string | null;
 }
 
 export class CreateEstimateDto {

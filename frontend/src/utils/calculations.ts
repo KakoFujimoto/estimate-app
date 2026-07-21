@@ -107,13 +107,15 @@ export function toEstimateInput(estimate: Estimate): import("../types/estimate")
     customerAddress: estimate.customerAddress ?? undefined,
     customerPhone: estimate.customerPhone ?? undefined,
     items: estimate.items.map(
-      ({ id, name, quantity, unit, unitPrice, taxRate, note }) => ({
+      ({ id, name, quantity, unit, unitPrice, taxRate, vendorId, vendorName, note }) => ({
         ...(id > 0 ? { id } : {}),
         name,
         quantity,
         unit,
         unitPrice,
         taxRate,
+        vendorId: vendorId ?? null,
+        vendorName: vendorName ?? null,
         note: note ?? undefined,
       }),
     ),

@@ -60,7 +60,7 @@ export class SeedService implements OnModuleInit {
       }),
     );
 
-    await this.customerRepo.save([
+    const customers = await this.customerRepo.save([
       this.customerRepo.create({
         companyId: company.id,
         name: 'サンプル商事株式会社',
@@ -98,9 +98,33 @@ export class SeedService implements OnModuleInit {
     ].map((item) => this.itemRepo.create(item)));
 
     const estimate1Items = [
-      { name: '鉄骨工事', quantity: 5, unit: 't', unitPrice: 150000, note: '増築部分' },
-      { name: 'コンクリート打設', quantity: 20, unit: 'm3', unitPrice: 18000, note: '基礎部分' },
-      { name: '内装仕上げ', quantity: 50, unit: 'm2', unitPrice: 12000, note: '2階部分' },
+      {
+        name: '鉄骨工事',
+        quantity: 5,
+        unit: 't',
+        unitPrice: 150000,
+        note: '増築部分',
+        vendorId: customers[1].id,
+        vendorName: customers[1].name,
+      },
+      {
+        name: 'コンクリート打設',
+        quantity: 20,
+        unit: 'm3',
+        unitPrice: 18000,
+        note: '基礎部分',
+        vendorId: customers[1].id,
+        vendorName: customers[1].name,
+      },
+      {
+        name: '内装仕上げ',
+        quantity: 50,
+        unit: 'm2',
+        unitPrice: 12000,
+        note: '2階部分',
+        vendorId: customers[0].id,
+        vendorName: customers[0].name,
+      },
     ];
     const totals1 = calcEstimateTotals(estimate1Items, 10);
 

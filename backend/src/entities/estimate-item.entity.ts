@@ -30,6 +30,12 @@ export class EstimateItemEntity {
   @Column({ type: 'real', default: 10 })
   taxRate: number;
 
+  @Column({ type: 'integer', nullable: true })
+  vendorId: number | null;
+
+  @Column({ type: 'text', nullable: true })
+  vendorName: string | null;
+
   @Column({ type: 'integer', default: 0 })
   sortOrder: number;
 
