@@ -74,6 +74,7 @@ export function DemoEstimateEditor() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [itemMasters, setItemMasters] = useState<ItemMaster[]>([]);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [savedMessage, setSavedMessage] = useState("");
   const [loading, setLoading] = useState(!isNew);
   const [notFound, setNotFound] = useState(false);
@@ -347,39 +348,53 @@ export function DemoEstimateEditor() {
                 onChange={(e) => updateEstimateState({ date: e.target.value })}
               />
             </label>
-            <label>
-              取引先（マスタから選択）
-              <select
-                value=""
-                onChange={(e) => {
-                  const c = customers.find((x) => x.id === Number(e.target.value));
-                  if (c) {
-                    updateEstimateState({
-                      customerName: c.name,
-                      customerAddress: c.address,
-                      customerPhone: c.phone,
-                    });
-                  }
-                  e.target.value = "";
-                }}
-              >
-                <option value="">— 選択 —</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              取引先名
-              <input
-                value={estimate.customerName}
-                onChange={(e) =>
-                  updateEstimateState({ customerName: e.target.value })
-                }
-              />
-            </label>
+            <div className="recipient-field">
+              <span className="recipient-field-label">担当者名/宛先</span>
+              <div className="recipient-field-row">
+                <label>
+                  取引先(マスタから選択)
+                  <select
+                    value={selectedCustomerId}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSelectedCustomerId(value);
+                      if (!value) {
+                        updateEstimateState({
+                          customerAddress: "",
+                          customerPhone: "",
+                        });
+                        return;
+                      }
+                      const c = customers.find((x) => x.id === Number(value));
+                      if (c) {
+                        updateEstimateState({
+                          customerAddress: c.address,
+                          customerPhone: c.phone,
+                        });
+                      }
+                    }}
+                  >
+                    <option value="">— 選択 —</option>
+                    {customers.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  自由入力
+                  <input
+                    value={estimate.customerName}
+                    onChange={(e) =>
+                      updateEstimateState({ customerName: e.target.value })
+                    }
+                    placeholder="担当者名・宛先を入力"
+                    autoComplete="off"
+                  />
+                </label>
+              </div>
+            </div>
             <label>
               住所
               <input
@@ -390,7 +405,7 @@ export function DemoEstimateEditor() {
               />
             </label>
             <label>
-              電話
+              電話番号
               <input
                 value={estimate.customerPhone ?? ""}
                 onChange={(e) =>

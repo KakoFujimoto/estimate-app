@@ -34,6 +34,28 @@ body {
   gap: 12px;
 }
 
+.recipient-field {
+  display: grid;
+  gap: 6px;
+}
+
+.recipient-field-label {
+  font-size: 14px;
+}
+
+.recipient-field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: end;
+}
+
+@media (max-width: 640px) {
+  .recipient-field-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 label {
   display: grid;
   gap: 6px;
