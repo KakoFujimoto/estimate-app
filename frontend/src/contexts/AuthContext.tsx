@@ -8,7 +8,13 @@ import {
   type ReactNode,
 } from "react";
 import { login as loginApi, requestPasswordReset } from "../api/authApi";
-import { ApiError, getAccessToken, setAccessToken } from "../api/client";
+import {
+  ApiError,
+  AUTH_UNAUTHORIZED_EVENT,
+  clearAuthSession,
+  getAccessToken,
+  setAccessToken,
+} from "../api/client";
 import type { AuthUser } from "../types/auth";
 
 const USER_KEY = "estimate_app_user";
@@ -51,10 +57,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (token && storedUser) {
       setUser(storedUser);
     } else {
-      setAccessToken(null);
-      saveStoredUser(null);
+      clearAuthSession();
     }
     setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    const onUnauthorized = () => {
+      setUser(null);
+    };
+    window.addEventListener(AUTH_UNAUTHORIZED_EVENT, onUnauthorized);
+    return () => {
+      window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, onUnauthorized);
+    };
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
@@ -71,8 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    setAccessToken(null);
-    saveStoredUser(null);
+    clearAuthSession();
     setUser(null);
   }, []);
 
